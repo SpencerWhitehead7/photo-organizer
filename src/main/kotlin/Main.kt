@@ -1,5 +1,4 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -8,12 +7,21 @@ import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -21,6 +29,19 @@ import javax.swing.filechooser.FileNameExtensionFilter
 @Composable
 @Preview
 fun App() {
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+//            .allowConversionToBitmap(true) // TODO: necessary?
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .memoryCache(
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.80)
+                    .build()
+            )
+            .crossfade(128)
+            .build()
+    }
+
     var imagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
 
     MaterialTheme {
@@ -52,10 +73,21 @@ fun App() {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(imagePaths) { path ->
-                    ImageFromDisk(
-                        filepath = path,
-                        modifier = Modifier.size(200.dp)
+                items(
+                    items = imagePaths,
+                    key = { it }
+                ) { path ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalPlatformContext.current)
+                            .data(File(path))
+                            .build(),
+//                        placeholder = placeholder, // TODO: add
+//                        fallback = , // TODO: add
+//                        error = , // TODO: add
+                        contentDescription = "Image from: $path",
+                        modifier = Modifier.size(200.dp),
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.Center
                     )
                 }
             }
@@ -63,9 +95,7 @@ fun App() {
     }
 }
 
-
-val SUPPORTED_IMAGES = setOf("jpg", "jpeg", "png", "gif", "bmp") // TODO: it's probably missing some
-// also I need some way to support raws
+val SUPPORTED_IMAGES = setOf("jpg", "jpeg", "png", "dng") // TODO: it's probably missing some
 
 fun collectImages(file: File): List<String> {
     return when {
@@ -83,24 +113,6 @@ fun collectImages(file: File): List<String> {
 
         else -> emptyList()
     }
-}
-
-@Composable
-fun ImageFromDisk(filepath: String, modifier: Modifier = Modifier) {
-//    try {
-        val bytes = File(filepath).readBytes()
-        val image = org.jetbrains.skia.Image.makeFromEncoded(bytes)
-        val imageBitmap = image.toComposeImageBitmap()
-
-        Image(
-            bitmap = imageBitmap,
-            contentDescription = "Image from: $filepath",
-            modifier = modifier
-        )
-//    TODO: error handling of some kind - cannot try/catch in composable function invocations
-//    } catch (e: Exception) {
-//        Text("Failed to load image from: $filepath")
-//    }
 }
 
 fun main() = application {
