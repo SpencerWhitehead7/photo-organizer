@@ -1,4 +1,5 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -6,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -62,7 +65,6 @@ fun App() {
                 ) {
                     selectedImagePath = null
                 }
-                .padding(16.dp)
 
         ) {
             Button(onClick = {
@@ -119,41 +121,56 @@ fun App() {
                     }
             )
 
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 200.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(
-                    items = imagePaths,
-                    key = { it }
-                ) { path ->
-                    Box(
-                        modifier = Modifier
-                            .size(200.dp)
-                            .background(
-                                if (path == selectedImagePath)
-                                    MaterialTheme.colors.secondary.copy(alpha = 0.2f)
-                                else
-                                    MaterialTheme.colors.surface.copy(alpha = 0f)
+                val gridState = rememberLazyGridState()
+
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Adaptive(minSize = 200.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                ) {
+                    items(
+                        items = imagePaths,
+                        key = { it }
+                    ) { path ->
+                        Box(
+                            modifier = Modifier
+                                .size(200.dp)
+                                .background(
+                                    if (path == selectedImagePath)
+                                        MaterialTheme.colors.secondary.copy(alpha = 0.2f)
+                                    else
+                                        MaterialTheme.colors.surface.copy(alpha = 0f)
+                                )
+                                .clickable { selectedImagePath = path }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalPlatformContext.current)
+                                    .data(File(path))
+                                    .build(),
+//                              placeholder = placeholder, // TODO: add
+//                              fallback = , // TODO: add
+//                              error = , // TODO: add
+                                contentDescription = "Image from: $path",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit,
+                                alignment = Alignment.Center
                             )
-                            .clickable { selectedImagePath = path }
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalPlatformContext.current)
-                                .data(File(path))
-                                .build(),
-//                          placeholder = placeholder, // TODO: add
-//                          fallback = , // TODO: add
-//                          error = , // TODO: add
-                            contentDescription = "Image from: $path",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit,
-                            alignment = Alignment.Center
-                        )
+                        }
                     }
                 }
+                VerticalScrollbar(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(scrollState = gridState)
+                )
             }
         }
     }
