@@ -1,5 +1,7 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeWindow
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -46,6 +49,8 @@ fun App() {
     var imagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
 
     var selectedImagePath by remember { mutableStateOf<String?>(null) }
+
+    var previewHeight by remember { mutableStateOf(400f) }
 
     MaterialTheme {
         Column(
@@ -85,7 +90,7 @@ fun App() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp),
+                    .height(previewHeight.dp),
                 contentAlignment = Alignment.Center
             ) {
                 selectedImagePath?.let { path ->
@@ -101,7 +106,18 @@ fun App() {
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .background(MaterialTheme.colors.onSurface.copy(alpha = 0.1f))
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            previewHeight = (previewHeight + dragAmount.y * 0.5f).coerceIn(100f, 800f)
+                        }
+                    }
+            )
 
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 200.dp),
