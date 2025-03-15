@@ -1,4 +1,5 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -44,8 +45,21 @@ fun App() {
 
     var imagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    var selectedImagePath by remember { mutableStateOf<String?>(null) }
+
     MaterialTheme {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = null,
+                    indication = null
+                ) {
+                    selectedImagePath = null
+                }
+                .padding(16.dp)
+
+        ) {
             Button(onClick = {
                 val fileChooser = JFileChooser().apply {
                     fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
@@ -60,12 +74,34 @@ fun App() {
                     imagePaths = fileChooser.selectedFiles.flatMap {
                         collectImages(File(it.absolutePath))
                     }
+                    selectedImagePath = imagePaths.firstOrNull()
                 }
             }) {
                 Text("Select Files")
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                selectedImagePath?.let { path ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalPlatformContext.current)
+                            .data(File(path))
+                            .build(),
+                        contentDescription = "Selected image: $path",
+                        modifier = Modifier.fillMaxHeight(),
+                        contentScale = ContentScale.Inside,
+                        alignment = Alignment.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 200.dp),
@@ -77,18 +113,30 @@ fun App() {
                     items = imagePaths,
                     key = { it }
                 ) { path ->
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalPlatformContext.current)
-                            .data(File(path))
-                            .build(),
-//                        placeholder = placeholder, // TODO: add
-//                        fallback = , // TODO: add
-//                        error = , // TODO: add
-                        contentDescription = "Image from: $path",
-                        modifier = Modifier.size(200.dp),
-                        contentScale = ContentScale.Fit,
-                        alignment = Alignment.Center
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .background(
+                                if (path == selectedImagePath)
+                                    MaterialTheme.colors.secondary.copy(alpha = 0.2f)
+                                else
+                                    MaterialTheme.colors.surface.copy(alpha = 0f)
+                            )
+                            .clickable { selectedImagePath = path }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalPlatformContext.current)
+                                .data(File(path))
+                                .build(),
+//                          placeholder = placeholder, // TODO: add
+//                          fallback = , // TODO: add
+//                          error = , // TODO: add
+                            contentDescription = "Image from: $path",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                            alignment = Alignment.Center
+                        )
+                    }
                 }
             }
         }
