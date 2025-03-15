@@ -9,13 +9,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -30,8 +27,6 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 @Preview
@@ -53,6 +48,11 @@ fun App() {
 
     var selectedImagePath by remember { mutableStateOf<String?>(null) }
 
+    fun setImagePaths(newImagePaths: List<String>) {
+        imagePaths = newImagePaths
+        selectedImagePath = newImagePaths.firstOrNull()
+    }
+
     var previewHeight by remember { mutableStateOf(400f) }
 
     MaterialTheme {
@@ -67,25 +67,7 @@ fun App() {
                 }
 
         ) {
-            Button(onClick = {
-                val fileChooser = JFileChooser().apply {
-                    fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
-                    isMultiSelectionEnabled = true
-                    fileFilter = FileNameExtensionFilter(
-                        "Images", *SUPPORTED_IMAGES.toTypedArray()
-                    )
-                }
-
-                val result = fileChooser.showOpenDialog(ComposeWindow())
-                if (result == JFileChooser.APPROVE_OPTION) {
-                    imagePaths = fileChooser.selectedFiles.flatMap {
-                        collectImages(File(it.absolutePath))
-                    }
-                    selectedImagePath = imagePaths.firstOrNull()
-                }
-            }) {
-                Text("Select Files")
-            }
+            SelectImages(onSelectImages = ::setImagePaths)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -173,26 +155,6 @@ fun App() {
                 )
             }
         }
-    }
-}
-
-val SUPPORTED_IMAGES = setOf("jpg", "jpeg", "png", "dng") // TODO: it's probably missing some
-
-fun collectImages(file: File): List<String> {
-    return when {
-        file.isFile -> {
-            if (file.extension.lowercase() in SUPPORTED_IMAGES) listOf(file.absolutePath)
-            else emptyList()
-        }
-
-        file.isDirectory -> {
-            file.walk()
-                .filter { it.isFile && it.extension.lowercase() in SUPPORTED_IMAGES }
-                .map { it.absolutePath }
-                .toList()
-        }
-
-        else -> emptyList()
     }
 }
 
