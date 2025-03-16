@@ -9,7 +9,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +28,7 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import java.awt.Desktop.getDesktop
 import java.io.File
 
 @Composable
@@ -67,7 +70,24 @@ fun App() {
                 }
 
         ) {
-            SelectImages(onSelectImages = ::setImagePaths)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SelectImages(onSelectImages = ::setImagePaths)
+
+                Button(
+                    enabled = selectedImagePath != null,
+                    onClick = {
+                        selectedImagePath?.let {
+                            getDesktop().moveToTrash(File(it)) // TODO: does it work on windows? linux? fallbacks? error handling?
+                            selectedImagePath = null
+                            imagePaths = imagePaths.filter { p -> p != it }
+                        }
+                    }) {
+                    Text("Delete Photo")
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
