@@ -7,11 +7,9 @@ import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
-val SUPPORTED_IMAGES_FORMATS = setOf("jpg", "jpeg", "png", "dng") // TODO: it's probably missing some
-
 @Composable
 @Preview
-fun SelectImages(onSelectImages: (List<String>) -> Unit) {
+fun SelectImages(onSelectImages: (List<Image>) -> Unit) {
     return Button(onClick = {
         val fileChooser = JFileChooser().apply {
             fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
@@ -43,7 +41,21 @@ fun SelectImages(onSelectImages: (List<String>) -> Unit) {
                     else -> emptyList()
                 }
             }
-            onSelectImages(imagePaths)
+
+            val images = imagePaths
+                .groupBy { File(it).nameWithoutExtension }
+                .map { (filename, paths) ->
+                    Image.create(
+                        id = filename,
+                        dng = paths.find { it.endsWith(".dng", ignoreCase = true) },
+                        jpeg = paths.find { it.endsWith(".jpeg", ignoreCase = true) },
+                        jpg = paths.find { it.endsWith(".jpg", ignoreCase = true) },
+                        png = paths.find { it.endsWith(".png", ignoreCase = true) },
+                        webp = paths.find { it.endsWith(".webp", ignoreCase = true) }
+                    )
+                }
+
+            onSelectImages(images)
         }
     }) {
         Text("Select Photos")

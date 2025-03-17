@@ -28,8 +28,6 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import java.awt.Desktop.getDesktop
-import java.io.File
 
 @Composable
 @Preview
@@ -47,13 +45,12 @@ fun App() {
             .build()
     }
 
-    var imagePaths by remember { mutableStateOf<List<String>>(emptyList()) }
+    var images by remember { mutableStateOf<List<Image>>(emptyList()) }
+    var selectedImage by remember { mutableStateOf<Image?>(null) }
 
-    var selectedImagePath by remember { mutableStateOf<String?>(null) }
-
-    fun setImagePaths(newImagePaths: List<String>) {
-        imagePaths = newImagePaths
-        selectedImagePath = newImagePaths.firstOrNull()
+    fun setImages(newImages: List<Image>) {
+        images = newImages.sortedBy { it.id } // TODO: different sorting mechanisms
+        selectedImage = newImages.firstOrNull()
     }
 
     var previewHeight by remember { mutableStateOf(400f) }
@@ -66,7 +63,7 @@ fun App() {
                     interactionSource = null,
                     indication = null
                 ) {
-                    selectedImagePath = null
+                    selectedImage = null
                 }
 
         ) {
@@ -74,15 +71,15 @@ fun App() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SelectImages(onSelectImages = ::setImagePaths)
+                SelectImages(onSelectImages = ::setImages)
 
                 Button(
-                    enabled = selectedImagePath != null,
+                    enabled = selectedImage != null,
                     onClick = {
-                        selectedImagePath?.let {
-                            getDesktop().moveToTrash(File(it)) // TODO: does it work on windows? linux? fallbacks? error handling?
-                            selectedImagePath = null
-                            imagePaths = imagePaths.filter { p -> p != it }
+                        selectedImage?.let {
+                            it.trash()
+                            selectedImage = null
+                            images = images.filter { p -> p != it }
                         }
                     }) {
                     Text("Delete Photo")
@@ -97,12 +94,12 @@ fun App() {
                     .height(previewHeight.dp),
                 contentAlignment = Alignment.Center
             ) {
-                selectedImagePath?.let { path ->
+                selectedImage?.let { image ->
                     AsyncImage(
                         model = ImageRequest.Builder(LocalPlatformContext.current)
-                            .data(File(path))
+                            .data(image.asFile())
                             .build(),
-                        contentDescription = "Selected image: $path",
+                        contentDescription = "Selected image: ${image.id}",
                         modifier = Modifier.fillMaxHeight(),
                         contentScale = ContentScale.Inside,
                         alignment = Alignment.Center
@@ -138,28 +135,28 @@ fun App() {
                         .padding(8.dp)
                 ) {
                     items(
-                        items = imagePaths,
+                        items = images,
                         key = { it }
-                    ) { path ->
+                    ) { image ->
                         Box(
                             modifier = Modifier
                                 .size(200.dp)
                                 .background(
-                                    if (path == selectedImagePath)
+                                    if (image == selectedImage)
                                         MaterialTheme.colors.secondary.copy(alpha = 0.2f)
                                     else
                                         MaterialTheme.colors.surface.copy(alpha = 0f)
                                 )
-                                .clickable { selectedImagePath = path }
+                                .clickable { selectedImage = image }
                         ) {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(File(path))
+                                    .data(image.asFile())
                                     .build(),
 //                              placeholder = placeholder, // TODO: add
 //                              fallback = , // TODO: add
 //                              error = , // TODO: add
-                                contentDescription = "Image from: $path",
+                                contentDescription = "Image from: ${image.id}",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit,
                                 alignment = Alignment.Center
