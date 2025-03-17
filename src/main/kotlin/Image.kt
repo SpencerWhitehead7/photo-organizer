@@ -69,6 +69,10 @@ class Image private constructor(
         return paths.first().asFile()
     }
 
+    fun formats(): List<ImageFormat> {
+        return paths.map { it.format }
+    }
+
     fun trash(format: ImageFormat? = null) {
         when (format) {
             null -> paths.forEach { it.trash() }

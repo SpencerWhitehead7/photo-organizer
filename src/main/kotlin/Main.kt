@@ -137,31 +137,12 @@ fun App() {
                     items(
                         items = images,
                         key = { it }
-                    ) { image ->
-                        Box(
-                            modifier = Modifier
-                                .size(200.dp)
-                                .background(
-                                    if (image == selectedImage)
-                                        MaterialTheme.colors.secondary.copy(alpha = 0.2f)
-                                    else
-                                        MaterialTheme.colors.surface.copy(alpha = 0f)
-                                )
-                                .clickable { selectedImage = image }
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(image.asFile())
-                                    .build(),
-//                              placeholder = placeholder, // TODO: add
-//                              fallback = , // TODO: add
-//                              error = , // TODO: add
-                                contentDescription = "Image from: ${image.id}",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit,
-                                alignment = Alignment.Center
-                            )
-                        }
+                    ) {
+                        GridImage(
+                            image = it,
+                            isSelected = it == selectedImage,
+                            onClick = { selectedImage = it },
+                        )
                     }
                 }
                 VerticalScrollbar(
