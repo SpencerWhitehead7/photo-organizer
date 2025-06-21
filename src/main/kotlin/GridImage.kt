@@ -8,6 +8,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,7 +22,12 @@ fun GridImage(
     image: Image,
     isSelected: Boolean,
     onClick: () -> Unit,
+    onTab: () -> Unit,
+    onShiftTab: () -> Unit,
+    onArrowKey: (Key) -> Unit,
 ) {
+    val arrowKeys = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)
+
     Column(
         modifier = Modifier
             .size(200.dp)
@@ -30,6 +36,24 @@ fun GridImage(
                 else MaterialTheme.colors.surface.copy(alpha = 0f)
             )
             .clickable { onClick() }
+            .onKeyEvent {
+                if (it.type == KeyEventType.KeyDown) {
+                    when (it.key) {
+                        in arrowKeys -> {
+                            onArrowKey(it.key)
+                            true
+                        }
+
+                        Key.Tab -> {
+                            (if (it.isShiftPressed) onShiftTab else onTab)()
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+                false
+            }
     ) {
         Box(
             modifier = Modifier.weight(1f)
