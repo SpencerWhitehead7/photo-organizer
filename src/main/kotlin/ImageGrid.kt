@@ -18,6 +18,7 @@ fun ImageGrid(
     images: List<Image>,
     selectedImage: Image?,
     setSelectedImage: (Image) -> Unit,
+    deleteSelectedImage: () -> Unit,
 ) {
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
@@ -109,6 +110,7 @@ fun ImageGrid(
                     onTab = { onTabNavigate(it, 1) },
                     onShiftTab = { onTabNavigate(it, -1) },
                     onArrowKey = { key -> onArrowNavigate(key) },
+                    onDelete = { deleteSelectedImage() },
                 )
             }
         }

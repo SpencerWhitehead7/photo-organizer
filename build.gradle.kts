@@ -22,6 +22,7 @@ dependencies {
     // With compose.desktop.common you will also lose @Preview functionality
     implementation(compose.desktop.currentOs)
     implementation("io.coil-kt.coil3:coil-compose:3.1.0")
+    implementation("org.apache.commons:commons-lang3:3.17.0")
 }
 
 compose.desktop {

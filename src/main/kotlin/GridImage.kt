@@ -1,4 +1,6 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,78 +27,91 @@ fun GridImage(
     onTab: () -> Unit,
     onShiftTab: () -> Unit,
     onArrowKey: (Key) -> Unit,
+    onDelete: () -> Unit,
 ) {
     val arrowKeys = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)
 
-    Column(
-        modifier = Modifier
-            .size(200.dp)
-            .background(
-                if (isSelected) MaterialTheme.colors.secondary.copy(alpha = 0.2f)
-                else MaterialTheme.colors.surface.copy(alpha = 0f)
+    ContextMenuArea(items = {
+        if (isSelected)
+            listOf(
+                ContextMenuItem("Delete") {
+                    onDelete()
+                },
             )
-            .clickable { onClick() }
-            .onKeyEvent {
-                if (it.type == KeyEventType.KeyDown) {
-                    when (it.key) {
-                        in arrowKeys -> {
-                            onArrowKey(it.key)
-                            true
-                        }
+        else listOf()
+    }) {
+        Column(
+            modifier = Modifier
+                .size(200.dp)
+                .background(
+                    if (isSelected) MaterialTheme.colors.onBackground.copy(alpha = 0.5f)
+                    else MaterialTheme.colors.background
+                )
+                .clickable { onClick() }
+                .onKeyEvent {
+                    if (it.type == KeyEventType.KeyDown) {
+                        when (it.key) {
+                            in arrowKeys -> {
+                                onArrowKey(it.key)
+                                true
+                            }
 
-                        Key.Tab -> {
-                            (if (it.isShiftPressed) onShiftTab else onTab)()
-                            true
-                        }
+                            Key.Tab -> {
+                                (if (it.isShiftPressed) onShiftTab else onTab)()
+                                true
+                            }
 
-                        else -> false
+                            else -> false
+                        }
+                    }
+                    false
+                }
+        ) {
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalPlatformContext.current)
+                        .data(image.asFile())
+                        .build(),
+//                    placeholder = placeholder, // TODO: add
+//                    fallback = , // TODO: add
+//                    error = , // TODO: add
+                    contentDescription = "Image from: ${image.id}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.Center
+                )
+
+                Row( // TODO: replace with FlowRow once that API is finalized (overflowing
+                    // labels isn't an urgent problem but it'd be nice know it'd work)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    image.formats().forEach {
+                        Text( // TODO: comp with different color per image format
+                            text = it.extension,
+                            style = MaterialTheme.typography.caption,
+                            color = MaterialTheme.colors.onPrimary,
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colors.primary,
+                                    shape = RoundedCornerShape(4.dp),
+                                )
+                                .padding(4.dp)
+                        )
                     }
                 }
-                false
             }
-    ) {
-        Box(
-            modifier = Modifier.weight(1f)
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(image.asFile())
-                    .build(),
-//                placeholder = placeholder, // TODO: add
-//                fallback = , // TODO: add
-//                error = , // TODO: add
-                contentDescription = "Image from: ${image.id}",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.Center
-            )
 
-            Row( // TODO: replace with FlowRow once that API is finalized (overflowing
-                // labels isn't an urgent problem but it'd be nice know it'd work)
+            Text(
+                text = image.id,
+                style = MaterialTheme.typography.caption,
+                color = if (isSelected) MaterialTheme.colors.background
+                else MaterialTheme.colors.onBackground,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                image.formats().forEach {
-                    Text( // TODO: comp with different color per image format
-                        text = it.extension,
-                        style = MaterialTheme.typography.caption,
-                        color = MaterialTheme.colors.onPrimary,
-                        modifier = Modifier
-                            .background(
-                                color = MaterialTheme.colors.primary,
-                                shape = RoundedCornerShape(4.dp),
-                            )
-                            .padding(4.dp)
-                    )
-                }
-            }
+                textAlign = TextAlign.Center
+            )
         }
-
-        Text(
-            text = image.id,
-            style = MaterialTheme.typography.caption,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
     }
 }
