@@ -11,12 +11,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import org.apache.commons.lang3.SystemUtils
 
 @Composable
 @Preview
@@ -24,12 +29,20 @@ fun GridImage(
     image: Image,
     isSelected: Boolean,
     onClick: () -> Unit,
+    onCtrlClick: () -> Unit,
+    onShiftClick: () -> Unit,
     onTab: () -> Unit,
     onShiftTab: () -> Unit,
-    onArrowKey: (Key) -> Unit,
+    onArrowKey: (Key, Boolean) -> Unit,
     onDelete: () -> Unit,
 ) {
     val arrowKeys = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)
+
+    val keyboardModifiers = LocalWindowInfo.current.keyboardModifiers
+    val isCtrlPressed =
+        if (SystemUtils.IS_OS_UNIX) keyboardModifiers.isMetaPressed
+        else keyboardModifiers.isCtrlPressed
+    val isShiftPressed = keyboardModifiers.isShiftPressed
 
     ContextMenuArea(items = {
         if (isSelected)
@@ -47,13 +60,21 @@ fun GridImage(
                     if (isSelected) MaterialTheme.colors.onBackground.copy(alpha = 0.5f)
                     else MaterialTheme.colors.background
                 )
-                .clickable { onClick() }
+                .clickable {
+                    when {
+                        isCtrlPressed && !isShiftPressed -> onCtrlClick()
+                        isShiftPressed && !isCtrlPressed -> onShiftClick()
+                        else -> onClick()
+                    }
+                }
                 .onKeyEvent {
                     if (it.type == KeyEventType.KeyDown) {
                         when (it.key) {
                             in arrowKeys -> {
-                                onArrowKey(it.key)
-                                true
+                                if (!isCtrlPressed) {
+                                    onArrowKey(it.key, it.isShiftPressed)
+                                    true
+                                }
                             }
 
                             Key.Tab -> {

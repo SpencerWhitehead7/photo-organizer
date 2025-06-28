@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.MenuBar
@@ -18,23 +17,14 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import coil3.ImageLoader
-import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
-import coil3.request.ImageRequest
 import coil3.request.crossfade
 import org.apache.commons.lang3.SystemUtils
 
 @Composable
-fun App(
-    images: List<Image>,
-    loadImages: () -> Unit,
-    selectedImage: Image?,
-    setSelectedImage: (Image?) -> Unit,
-    deleteSelectedImage: () -> Unit,
-) {
+fun App(imagesState: ImagesState) {
     // 2 grid images + 3 gutters
     var explorerWidth by remember { mutableStateOf((200 * 2 + 8 * 3).dp) }
 
@@ -46,14 +36,14 @@ fun App(
                 interactionSource = null,
                 indication = null
             ) {
-                setSelectedImage(null)
+                imagesState.clearSelectedImages()
             },
-        horizontalAlignment = if (images.isEmpty()) Alignment.CenterHorizontally else Alignment.Start,
-        verticalArrangement = if (images.isEmpty()) Arrangement.Center else Arrangement.Top,
+        horizontalAlignment = if (imagesState.images.isEmpty()) Alignment.CenterHorizontally else Alignment.Start,
+        verticalArrangement = if (imagesState.images.isEmpty()) Arrangement.Center else Arrangement.Top,
     ) {
-        if (images.isEmpty()) {
+        if (imagesState.images.isEmpty()) {
             Button(
-                onClick = { loadImages() }
+                onClick = { imagesState.load() }
             ) {
                 Text("Load Images")
             }
@@ -66,12 +56,7 @@ fun App(
                         .fillMaxHeight()
                         .width(explorerWidth),
                 ) {
-                    ImageGrid(
-                        images = images,
-                        selectedImage = selectedImage,
-                        setSelectedImage = { setSelectedImage(it) },
-                        deleteSelectedImage = { deleteSelectedImage() }
-                    )
+                    ImageGrid(imagesState)
                 }
 
                 Spacer(
@@ -93,17 +78,7 @@ fun App(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    selectedImage?.let {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalPlatformContext.current)
-                                .data(it.asFile())
-                                .build(),
-                            contentDescription = "Selected image: ${it.id}",
-                            modifier = Modifier.fillMaxWidth(),
-                            contentScale = ContentScale.Inside,
-                            alignment = Alignment.Center
-                        )
-                    }
+                    PreviewImage(imagesState.selectedImages.toList())
                 }
             }
         }
@@ -125,32 +100,7 @@ fun main() = application {
             .build()
     }
 
-    var images by remember { mutableStateOf<List<Image>>(emptyList()) }
-    var selectedImage by remember { mutableStateOf<Image?>(null) }
-
-    fun loadImages() {
-        loadImagesFromDisk()?.let { newImages ->
-            images = newImages.sortedBy { it.id } // TODO: add other sorting mechanisms
-            images.firstOrNull()?.let {
-                selectedImage = it
-            }
-        }
-    }
-
-    fun deleteSelectedImage() {
-        selectedImage?.let {
-            it.trash()
-            val imgIdx = images.indexOf(it)
-            images = images.filter { img -> img != it }
-            selectedImage = if (images.isEmpty()) null
-            else images[imgIdx.coerceAtMost(images.lastIndex)]
-        }
-    }
-
-    fun setSelectedImage(image: Image?) {
-        selectedImage = image
-    }
-
+    val imagesState = remember { ImagesState() }
 
     Window(
         onCloseRequest = ::exitApplication,
@@ -162,14 +112,14 @@ fun main() = application {
                 Item(
                     text = "Load Images",
                     shortcut = KeyShortcut(key = Key.O, meta = true),
-                    onClick = ::loadImages,
+                    onClick = imagesState::load,
                 )
                 Item(
                     text = "Deleted Selected Images",
                     shortcut =
                         if (SystemUtils.IS_OS_UNIX) KeyShortcut(key = Key.Backspace, meta = true)
                         else KeyShortcut(key = Key.Delete),
-                    onClick = ::deleteSelectedImage,
+                    onClick = imagesState::deleteSelectedImages,
                 )
             }
         }
@@ -177,13 +127,7 @@ fun main() = application {
         MaterialTheme(
             colors = if (isSystemInDarkTheme()) darkColors() else lightColors()
         ) {
-            App(
-                images = images,
-                loadImages = ::loadImages,
-                selectedImage = selectedImage,
-                setSelectedImage = ::setSelectedImage,
-                deleteSelectedImage = ::deleteSelectedImage,
-            )
+            App(imagesState)
         }
     }
 }

@@ -1,4 +1,11 @@
+import ImagePath.*
 import androidx.compose.ui.awt.ComposeWindow
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.executeBlocking
+import coil3.request.ImageRequest
+import coil3.size.Precision
+import coil3.size.Size
 import java.awt.Desktop.getDesktop
 import java.io.File
 import javax.swing.JFileChooser
@@ -74,6 +81,21 @@ class Image private constructor(
 
     fun formats(): List<ImageFormat> {
         return paths.map { it.format }
+    }
+
+    fun isVertical(ctx: PlatformContext): Boolean {
+        val request = ImageRequest.Builder(ctx)
+            .data(this.asFile())
+            .size(Size.ORIGINAL)
+            .precision(Precision.INEXACT)
+            .build()
+
+        return SingletonImageLoader
+            .get(ctx)
+            .executeBlocking(request)
+            .image
+            ?.let { it.width < it.height }
+            ?: false
     }
 
     fun trash(format: ImageFormat? = null) {

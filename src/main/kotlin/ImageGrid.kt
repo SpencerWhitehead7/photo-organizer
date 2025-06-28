@@ -14,22 +14,17 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ImageGrid(
-    images: List<Image>,
-    selectedImage: Image?,
-    setSelectedImage: (Image) -> Unit,
-    deleteSelectedImage: () -> Unit,
-) {
+fun ImageGrid(imagesState: ImagesState) {
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
 
     fun onTabNavigate(image: Image, offset: Int) {
-        val newSelectedIndex = (images.indexOf(image) + offset).coerceIn(0, images.lastIndex)
+        val newSelectedIndex = (imagesState.images.indexOf(image) + offset).coerceIn(0, imagesState.images.lastIndex)
 
-        setSelectedImage(images[newSelectedIndex])
+        imagesState.selectImage(newSelectedIndex)
     }
 
-    fun onArrowNavigate(key: Key) {
+    fun onArrowNavigate(key: Key, isRange: Boolean) {
         // TODO: scrolling bug
         // This all seems to work, except that when the function runs during an ongoing
         // user scroll, it just refuses to scroll to the arrow-selected item.
@@ -44,15 +39,16 @@ fun ImageGrid(
             } ?: 1
         }
 
-        val selectedIndex = images.indexOf(selectedImage)
+        val lastSelectedIndex = imagesState.mostRecentSelectedIndex()
         val newIndex = when (key) {
-            Key.DirectionRight -> (selectedIndex + 1).coerceAtMost(images.lastIndex)
-            Key.DirectionLeft -> (selectedIndex - 1).coerceAtLeast(0)
-            Key.DirectionDown -> (selectedIndex + getColumnCount()).coerceAtMost(images.lastIndex)
-            Key.DirectionUp -> (selectedIndex - getColumnCount()).coerceAtLeast(0)
+            Key.DirectionRight -> (lastSelectedIndex + 1).coerceAtMost(imagesState.images.lastIndex)
+            Key.DirectionLeft -> (lastSelectedIndex - 1).coerceAtLeast(0)
+            Key.DirectionDown -> (lastSelectedIndex + getColumnCount()).coerceAtMost(imagesState.images.lastIndex)
+            Key.DirectionUp -> (lastSelectedIndex - getColumnCount()).coerceAtLeast(0)
             else -> return
         }
-        setSelectedImage(images[newIndex])
+        if (isRange) imagesState.selectImageRange(newIndex)
+        else imagesState.selectImage(newIndex)
 
         val gridItem = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == newIndex }
 
@@ -102,15 +98,17 @@ fun ImageGrid(
                 .fillMaxSize()
                 .padding(8.dp)
         ) {
-            items(images, key = { it }) {
+            items(imagesState.images, key = { it }) {
                 GridImage(
                     image = it,
-                    isSelected = it == selectedImage,
-                    onClick = { setSelectedImage(it) },
+                    isSelected = it in imagesState.selectedImages,
+                    onClick = { imagesState.selectImage(it) },
+                    onCtrlClick = { imagesState.selectToggleImage(it) },
+                    onShiftClick = { imagesState.selectImageRange(it) },
                     onTab = { onTabNavigate(it, 1) },
                     onShiftTab = { onTabNavigate(it, -1) },
-                    onArrowKey = { key -> onArrowNavigate(key) },
-                    onDelete = { deleteSelectedImage() },
+                    onArrowKey = { key, isRange -> onArrowNavigate(key, isRange) },
+                    onDelete = { imagesState.deleteSelectedImages() },
                 )
             }
         }
