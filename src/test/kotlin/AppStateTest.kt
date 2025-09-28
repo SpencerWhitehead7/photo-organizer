@@ -3,6 +3,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AppStateTest {
@@ -14,8 +15,20 @@ class AppStateTest {
     fun testInitialState() {
         val appState = AppState()
 
+        assertFalse { appState.isImageGridPoppedOut }
         assertTrue(appState.images.isEmpty())
         assertTrue(appState.selectedImages.isEmpty())
+    }
+
+    @Test
+    fun testToggleIsImageGridPoppedOut() {
+        val appState = AppState()
+
+        assertFalse { appState.isImageGridPoppedOut }
+        appState.toggleIsImageGridPoppedOut()
+        assertTrue { appState.isImageGridPoppedOut }
+        appState.toggleIsImageGridPoppedOut()
+        assertFalse { appState.isImageGridPoppedOut }
     }
 
     @Test

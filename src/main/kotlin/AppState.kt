@@ -5,6 +5,13 @@ import kotlin.math.max
 import kotlin.math.min
 
 class AppState {
+    var isImageGridPoppedOut by mutableStateOf(false)
+        private set
+
+    fun toggleIsImageGridPoppedOut() {
+        this.isImageGridPoppedOut = !this.isImageGridPoppedOut
+    }
+
     var images by mutableStateOf(listOf<Image>())
     var selectedImages by mutableStateOf(setOf<Image>())
         private set
