@@ -14,14 +14,14 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ImageGrid(imagesState: ImagesState) {
+fun ImageGrid(appState: AppState) {
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
 
     fun onTabNavigate(image: Image, offset: Int) {
-        val newSelectedIndex = (imagesState.images.indexOf(image) + offset).coerceIn(0, imagesState.images.lastIndex)
+        val newSelectedIndex = (appState.images.indexOf(image) + offset).coerceIn(0, appState.images.lastIndex)
 
-        imagesState.selectImage(newSelectedIndex)
+        appState.selectImage(newSelectedIndex)
     }
 
     fun onArrowNavigate(key: Key, isRange: Boolean) {
@@ -39,16 +39,16 @@ fun ImageGrid(imagesState: ImagesState) {
             } ?: 1
         }
 
-        val lastSelectedIndex = imagesState.mostRecentSelectedIndex()
+        val lastSelectedIndex = appState.mostRecentSelectedIndex()
         val newIndex = when (key) {
-            Key.DirectionRight -> (lastSelectedIndex + 1).coerceAtMost(imagesState.images.lastIndex)
+            Key.DirectionRight -> (lastSelectedIndex + 1).coerceAtMost(appState.images.lastIndex)
             Key.DirectionLeft -> (lastSelectedIndex - 1).coerceAtLeast(0)
-            Key.DirectionDown -> (lastSelectedIndex + getColumnCount()).coerceAtMost(imagesState.images.lastIndex)
+            Key.DirectionDown -> (lastSelectedIndex + getColumnCount()).coerceAtMost(appState.images.lastIndex)
             Key.DirectionUp -> (lastSelectedIndex - getColumnCount()).coerceAtLeast(0)
             else -> return
         }
-        if (isRange) imagesState.selectImageRange(newIndex)
-        else imagesState.selectImage(newIndex)
+        if (isRange) appState.selectImageRange(newIndex)
+        else appState.selectImage(newIndex)
 
         val gridItem = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == newIndex }
 
@@ -98,17 +98,17 @@ fun ImageGrid(imagesState: ImagesState) {
                 .fillMaxSize()
                 .padding(8.dp)
         ) {
-            items(imagesState.images, key = { it }) {
+            items(appState.images, key = { it }) {
                 GridImage(
                     image = it,
-                    isSelected = it in imagesState.selectedImages,
-                    onClick = { imagesState.selectImage(it) },
-                    onCtrlClick = { imagesState.selectToggleImage(it) },
-                    onShiftClick = { imagesState.selectImageRange(it) },
+                    isSelected = it in appState.selectedImages,
+                    onClick = { appState.selectImage(it) },
+                    onCtrlClick = { appState.selectToggleImage(it) },
+                    onShiftClick = { appState.selectImageRange(it) },
                     onTab = { onTabNavigate(it, 1) },
                     onShiftTab = { onTabNavigate(it, -1) },
                     onArrowKey = { key, isRange -> onArrowNavigate(key, isRange) },
-                    onDelete = { imagesState.deleteSelectedImages() },
+                    onDelete = { appState.deleteSelectedImages() },
                 )
             }
         }

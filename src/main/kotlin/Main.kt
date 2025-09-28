@@ -24,7 +24,7 @@ import coil3.request.crossfade
 import org.apache.commons.lang3.SystemUtils
 
 @Composable
-fun App(imagesState: ImagesState) {
+fun App(appState: AppState) {
     // 2 grid images + 3 gutters
     var explorerWidth by remember { mutableStateOf((200 * 2 + 8 * 3).dp) }
 
@@ -36,14 +36,14 @@ fun App(imagesState: ImagesState) {
                 interactionSource = null,
                 indication = null
             ) {
-                imagesState.clearSelectedImages()
+                appState.clearSelectedImages()
             },
-        horizontalAlignment = if (imagesState.images.isEmpty()) Alignment.CenterHorizontally else Alignment.Start,
-        verticalArrangement = if (imagesState.images.isEmpty()) Arrangement.Center else Arrangement.Top,
+        horizontalAlignment = if (appState.images.isEmpty()) Alignment.CenterHorizontally else Alignment.Start,
+        verticalArrangement = if (appState.images.isEmpty()) Arrangement.Center else Arrangement.Top,
     ) {
-        if (imagesState.images.isEmpty()) {
+        if (appState.images.isEmpty()) {
             Button(
-                onClick = { imagesState.load() }
+                onClick = { appState.load() }
             ) {
                 Text("Load Images")
             }
@@ -56,7 +56,7 @@ fun App(imagesState: ImagesState) {
                         .fillMaxHeight()
                         .width(explorerWidth),
                 ) {
-                    ImageGrid(imagesState)
+                    ImageGrid(appState)
                 }
 
                 Spacer(
@@ -78,7 +78,7 @@ fun App(imagesState: ImagesState) {
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    PreviewImage(imagesState.selectedImages.toList())
+                    PreviewImage(appState.selectedImages.toList())
                 }
             }
         }
@@ -100,7 +100,7 @@ fun main() = application {
             .build()
     }
 
-    val imagesState = remember { ImagesState() }
+    val appState = remember { AppState() }
 
     Window(
         onCloseRequest = ::exitApplication,
@@ -112,14 +112,14 @@ fun main() = application {
                 Item(
                     text = "Load Images",
                     shortcut = KeyShortcut(key = Key.O, meta = true),
-                    onClick = imagesState::load,
+                    onClick = appState::load,
                 )
                 Item(
                     text = "Deleted Selected Images",
                     shortcut =
                         if (SystemUtils.IS_OS_UNIX) KeyShortcut(key = Key.Backspace, meta = true)
                         else KeyShortcut(key = Key.Delete),
-                    onClick = imagesState::deleteSelectedImages,
+                    onClick = appState::deleteSelectedImages,
                 )
             }
         }
@@ -127,7 +127,7 @@ fun main() = application {
         MaterialTheme(
             colors = if (isSystemInDarkTheme()) darkColors() else lightColors()
         ) {
-            App(imagesState)
+            App(appState)
         }
     }
 }

@@ -4,7 +4,7 @@ import androidx.compose.runtime.setValue
 import kotlin.math.max
 import kotlin.math.min
 
-class ImagesState {
+class AppState {
     var images by mutableStateOf(listOf<Image>())
     var selectedImages by mutableStateOf(setOf<Image>())
         private set
