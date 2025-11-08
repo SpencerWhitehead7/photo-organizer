@@ -18,13 +18,14 @@ class AppState {
     private var orderedSelectedForMostRecentIndex by mutableStateOf(linkedSetOf<Image>())
     private var orderedSelectedForRangePivotIndex by mutableStateOf(linkedSetOf<Image>())
 
-    fun mostRecentSelectedIndex(): Int {
-        return orderedSelectedForMostRecentIndex.lastOrNull()?.let { images.indexOf(it) } ?: 0
-    }
+    val mostRecentSelectedIndex: Int
+        get() = orderedSelectedForMostRecentIndex.lastOrNull()?.let { images.indexOf(it) } ?: 0
 
-    fun pivotRangeIndex(): Int {
-        return orderedSelectedForRangePivotIndex.lastOrNull()?.let { images.indexOf(it) } ?: 0
-    }
+    val pivotRangeIndex: Int
+        get() = orderedSelectedForRangePivotIndex.lastOrNull()?.let { images.indexOf(it) } ?: 0
+
+    val selectedImagesFormats: Set<ImageFormat>
+        get() = selectedImages.flatMap { it.formats() }.toSet()
 
     fun load() {
         loadImagesFromDisk()?.let { newImages ->
@@ -64,7 +65,7 @@ class AppState {
         val updatedOrderedSelectedForLastIndex = orderedSelectedForMostRecentIndex.toMutableSet()
         val updatedOrderedSelectedForRangePivotIndex = orderedSelectedForRangePivotIndex.toMutableSet()
 
-        val pivotIdx = pivotRangeIndex()
+        val pivotIdx = pivotRangeIndex
 
         var startRangeIdx = pivotIdx - 1
         while (startRangeIdx >= 0 && images[startRangeIdx] in updatedSelectedImages) {
@@ -128,15 +129,17 @@ class AppState {
         orderedSelectedForRangePivotIndex = linkedSetOf()
     }
 
-    fun deleteSelectedImages() {
-        selectedImages.forEach { it.trash() }
+    fun deleteSelectedImages(format: ImageFormat? = null) {
+        selectedImages.forEach { it.trash(format) }
 
-        val lastSelectedImageIndex = mostRecentSelectedIndex()
+        val imagesToRemove = selectedImages.filter { it.formats().isEmpty() }.toSet()
 
-        images = images.filter { it !in selectedImages }
-        if (images.isEmpty()) {
-            clearSelectedImages()
-        } else {
+        val didRemoveAllSelectedImages = selectedImages == imagesToRemove
+        val lastSelectedImageIndex = mostRecentSelectedIndex
+
+        images = images.filter { !imagesToRemove.contains(it) }
+        imagesToRemove.forEach { selectToggleImage(it) }
+        if (images.isNotEmpty() && didRemoveAllSelectedImages) {
             selectImage(lastSelectedImageIndex.coerceAtMost(images.lastIndex))
         }
     }

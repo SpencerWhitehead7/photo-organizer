@@ -1,18 +1,35 @@
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.awt.Desktop
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+
 class AppStateTest {
-    private fun createMockImage() = mockk<Image> {
-        every { this@mockk.trash() } returns Unit
+    private fun createImage(
+        suffix: Int = 0,
+        formats: Set<ImageFormat> = setOf(ImageFormat.JPG),
+        mockedDesktop: Desktop = mockk<Desktop>()
+    ): Image {
+        every { mockedDesktop.moveToTrash(any<File>()) } returns true
+
+        return Image.create(
+            id = "filename$suffix",
+            dng = if (formats.contains(ImageFormat.DNG)) "filename$suffix.dng" else null,
+            jpeg = if (formats.contains(ImageFormat.JPEG)) "filename$suffix.jpeg" else null,
+            jpg = if (formats.contains(ImageFormat.JPG)) "filename$suffix.jpg" else null,
+            png = if (formats.contains(ImageFormat.PNG)) "filename$suffix.png" else null,
+            webp = if (formats.contains(ImageFormat.WEBP)) "filename$suffix.webp" else null,
+            desktop = mockedDesktop
+        )
     }
 
     @Test
-    fun testInitialState() {
+    fun initialState() {
         val appState = AppState()
 
         assertFalse { appState.isImageGridPoppedOut }
@@ -21,7 +38,7 @@ class AppStateTest {
     }
 
     @Test
-    fun testToggleIsImageGridPoppedOut() {
+    fun toggleIsImageGridPoppedOut() {
         val appState = AppState()
 
         assertFalse { appState.isImageGridPoppedOut }
@@ -32,112 +49,176 @@ class AppStateTest {
     }
 
     @Test
-    fun testSelectImageByImage() {
+    fun selectedImageFormats() {
+        val allFormat = ImageFormat.entries.toSet()
+        val dngFormat = setOf(ImageFormat.DNG)
+        val jpegFormat = setOf(ImageFormat.JPEG)
+        val jpgFormat = setOf(ImageFormat.JPG)
+        val pngFormat = setOf(ImageFormat.PNG)
+        val webpFormat = setOf(ImageFormat.WEBP)
+
+        val all = createImage(0, allFormat)
+        val dng = createImage(0, dngFormat)
+        val jpeg = createImage(0, jpegFormat)
+        val jpg = createImage(0, jpgFormat)
+        val png = createImage(0, pngFormat)
+        val webp = createImage(0, webpFormat)
+
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+
+        appState.images = listOf(all, dng, jpeg, jpg, png, webp)
+
+        assertEquals(emptySet(), appState.selectedImagesFormats)
+
+        appState.selectToggleImage(all)
+        assertEquals(allFormat, appState.selectedImagesFormats)
+
+        appState.selectToggleImage(dng)
+        appState.selectToggleImage(jpeg)
+        appState.selectToggleImage(jpg)
+        appState.selectToggleImage(png)
+        appState.selectToggleImage(webp)
+        assertEquals(allFormat, appState.selectedImagesFormats)
+
+        appState.selectToggleImage(all)
+        assertEquals(allFormat, appState.selectedImagesFormats)
+
+        appState.selectToggleImage(dng)
+        assertEquals(
+            setOf(ImageFormat.JPEG, ImageFormat.JPG, ImageFormat.PNG, ImageFormat.WEBP),
+            appState.selectedImagesFormats
+        )
+
+        appState.selectToggleImage(jpeg)
+        assertEquals(
+            setOf(ImageFormat.JPG, ImageFormat.PNG, ImageFormat.WEBP),
+            appState.selectedImagesFormats
+        )
+
+        appState.selectToggleImage(jpg)
+        assertEquals(
+            setOf(ImageFormat.PNG, ImageFormat.WEBP),
+            appState.selectedImagesFormats
+        )
+
+        appState.selectToggleImage(png)
+        assertEquals(
+            setOf(ImageFormat.WEBP),
+            appState.selectedImagesFormats
+        )
+
+        appState.selectToggleImage(webp)
+        assertEquals(emptySet(), appState.selectedImagesFormats)
+
+    }
+
+    @Test
+    fun selectImageByImage() {
+        val appState = AppState()
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[0])
         assertEquals(setOf(images[0]), appState.selectedImages)
-        assertEquals(0, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(0, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
 
         appState.selectImage(images[4])
         assertEquals(setOf(images[4]), appState.selectedImages)
-        assertEquals(4, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(4, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImage(images[8])
         assertEquals(setOf(images[8]), appState.selectedImages)
-        assertEquals(8, appState.mostRecentSelectedIndex())
-        assertEquals(8, appState.pivotRangeIndex())
+        assertEquals(8, appState.mostRecentSelectedIndex)
+        assertEquals(8, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageByIndex() {
+    fun selectImageByIndex() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(0)
         assertEquals(setOf(images[0]), appState.selectedImages)
-        assertEquals(0, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(0, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
 
         appState.selectImage(4)
         assertEquals(setOf(images[4]), appState.selectedImages)
-        assertEquals(4, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(4, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImage(8)
         assertEquals(setOf(images[8]), appState.selectedImages)
-        assertEquals(8, appState.mostRecentSelectedIndex())
-        assertEquals(8, appState.pivotRangeIndex())
+        assertEquals(8, appState.mostRecentSelectedIndex)
+        assertEquals(8, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectToggleImage() {
+    fun selectToggleImage() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectToggleImage(images[0])
         assertEquals(setOf(images[0]), appState.selectedImages)
-        assertEquals(0, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(0, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
 
         appState.selectToggleImage(images[4])
         assertEquals(setOf(images[0], images[4]), appState.selectedImages)
-        assertEquals(4, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(4, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectToggleImage(images[8])
         assertEquals(setOf(images[0], images[4], images[8]), appState.selectedImages)
-        assertEquals(8, appState.mostRecentSelectedIndex())
-        assertEquals(8, appState.pivotRangeIndex())
+        assertEquals(8, appState.mostRecentSelectedIndex)
+        assertEquals(8, appState.pivotRangeIndex)
 
         appState.selectToggleImage(images[4])
         assertEquals(setOf(images[0], images[8]), appState.selectedImages)
-        assertEquals(8, appState.mostRecentSelectedIndex())
-        assertEquals(8, appState.pivotRangeIndex())
+        assertEquals(8, appState.mostRecentSelectedIndex)
+        assertEquals(8, appState.pivotRangeIndex)
 
         appState.selectToggleImage(images[8])
         assertEquals(setOf(images[0]), appState.selectedImages)
-        assertEquals(0, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(0, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRange() {
+    fun selectImageRange() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
 
         appState.selectImageRange(images[6])
         assertEquals(images.slice(4..6).toSet(), appState.selectedImages)
-        assertEquals(6, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(6, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeDefaultsToStartingAt0() {
+    fun selectImageRangeDefaultsToStartingAt0() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImageRange(images[2])
 
         assertEquals(images.slice(0..2).toSet(), appState.selectedImages)
-        assertEquals(2, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(2, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeSelectsAndExtendsForward() {
+    fun selectImageRangeSelectsAndExtendsForward() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
@@ -145,20 +226,20 @@ class AppStateTest {
         appState.selectImageRange(images[6])
 
         assertEquals(images.slice(4..6).toSet(), appState.selectedImages)
-        assertEquals(6, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(6, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[7])
 
         assertEquals(images.slice(4..7).toSet(), appState.selectedImages)
-        assertEquals(7, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(7, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeSelectsAndExtendsBackward() {
+    fun selectImageRangeSelectsAndExtendsBackward() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
@@ -166,20 +247,20 @@ class AppStateTest {
         appState.selectImageRange(images[2])
 
         assertEquals(images.slice(2..4).toSet(), appState.selectedImages)
-        assertEquals(2, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(2, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[1])
 
         assertEquals(images.slice(1..4).toSet(), appState.selectedImages)
-        assertEquals(1, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeSelectsAndShrinksForward() {
+    fun selectImageRangeSelectsAndShrinksForward() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
@@ -187,20 +268,20 @@ class AppStateTest {
         appState.selectImageRange(images[7])
 
         assertEquals(images.slice(4..7).toSet(), appState.selectedImages)
-        assertEquals(7, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(7, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[6])
 
         assertEquals(images.slice(4..6).toSet(), appState.selectedImages)
-        assertEquals(6, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(6, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeSelectsAndShrinksBackward() {
+    fun selectImageRangeSelectsAndShrinksBackward() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
@@ -208,20 +289,20 @@ class AppStateTest {
         appState.selectImageRange(images[1])
 
         assertEquals(images.slice(1..4).toSet(), appState.selectedImages)
-        assertEquals(1, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[2])
 
         assertEquals(images.slice(2..4).toSet(), appState.selectedImages)
-        assertEquals(2, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(2, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeFlipsForwardAroundPivotIndex() {
+    fun selectImageRangeFlipsForwardAroundPivotIndex() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
@@ -229,20 +310,20 @@ class AppStateTest {
         appState.selectImageRange(images[2])
 
         assertEquals(images.slice(2..4).toSet(), appState.selectedImages)
-        assertEquals(2, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(2, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[7])
 
         assertEquals(images.slice(4..7).toSet(), appState.selectedImages)
-        assertEquals(7, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(7, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeFlipsBackwardAroundPivotIndex() {
+    fun selectImageRangeFlipsBackwardAroundPivotIndex() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[4])
@@ -250,20 +331,20 @@ class AppStateTest {
         appState.selectImageRange(images[6])
 
         assertEquals(images.slice(4..6).toSet(), appState.selectedImages)
-        assertEquals(6, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(6, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[1])
 
         assertEquals(images.slice(1..4).toSet(), appState.selectedImages)
-        assertEquals(1, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeAbsorbsForwardAdjacentRanges() {
+    fun selectImageRangeAbsorbsForwardAdjacentRanges() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[7])
@@ -272,20 +353,20 @@ class AppStateTest {
         appState.selectImageRange(images[6])
 
         assertEquals(images.slice(4..7).toSet(), appState.selectedImages)
-        assertEquals(7, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(7, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
 
         appState.selectImageRange(images[1])
 
         assertEquals(images.slice(1..4).toSet(), appState.selectedImages)
-        assertEquals(1, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testSelectImageRangeAbsorbsBackwardAdjacentRanges() {
+    fun selectImageRangeAbsorbsBackwardAdjacentRanges() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImage(images[1])
@@ -294,19 +375,19 @@ class AppStateTest {
         appState.selectImageRange(images[2])
 
         assertEquals(images.slice(1..4).toSet(), appState.selectedImages)
-        assertEquals(1, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
         appState.selectImageRange(images[7])
 
         assertEquals(images.slice(4..7).toSet(), appState.selectedImages)
-        assertEquals(7, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(7, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
     fun clearSelectedImages() {
         val appState = AppState()
-        val images = List(3) { createMockImage() }
+        val images = List(3) { createImage(it) }
         appState.images = images
 
         appState.selectImage(1)
@@ -314,77 +395,140 @@ class AppStateTest {
         appState.clearSelectedImages()
 
         assertEquals(setOf(), appState.selectedImages)
-        assertEquals(0, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(0, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testDeleteSelectedImages() {
+    fun deleteSelectedImages() {
+        val mockedDesktop = mockk<Desktop>()
+
         val appState = AppState()
-        val images = List(3) { createMockImage() }
+        val images = List(3) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG), mockedDesktop) }
         appState.images = images
 
         appState.selectImage(1)
 
         appState.deleteSelectedImages()
 
-        verify { images[1].trash() }
+        verify { mockedDesktop.moveToTrash(File("filename1.dng")) }
+        verify { mockedDesktop.moveToTrash(File("filename1.jpg")) }
         assertEquals(listOf(images[0], images[2]), appState.images)
         assertEquals(setOf(images[2]), appState.selectedImages)
-        assertEquals(1, appState.mostRecentSelectedIndex())
-        assertEquals(1, appState.pivotRangeIndex())
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(1, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testDeleteSelectedImagesSelectsSameIndex() {
+    fun deleteSelectedImagesOfFormat() {
+        val mockedDesktop = mockk<Desktop>()
+
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(3) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG), mockedDesktop) }
+        appState.images = images
+
+        appState.selectImage(1)
+
+        appState.deleteSelectedImages(ImageFormat.DNG)
+
+        verify { mockedDesktop.moveToTrash(File("filename1.dng")) }
+        assertEquals(images, appState.images)
+        assertEquals(setOf(images[1]), appState.selectedImages)
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(1, appState.pivotRangeIndex)
+    }
+
+    @Test
+    fun deleteSelectedImagesOfFormatHandlesPartiallyAndFullyDeletedImages() {
+        val appState = AppState()
+        val images = List(3) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG)) }
+        appState.images = images
+
+        appState.selectImage(1)
+
+        appState.deleteSelectedImages(ImageFormat.DNG)
+
+        assertEquals(images, appState.images)
+        assertEquals(setOf(images[1]), appState.selectedImages)
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(1, appState.pivotRangeIndex)
+
+        appState.deleteSelectedImages(ImageFormat.JPG)
+
+        assertEquals(listOf(images[0], images[2]), appState.images)
+        assertEquals(setOf(images[2]), appState.selectedImages)
+        assertEquals(1, appState.mostRecentSelectedIndex)
+        assertEquals(1, appState.pivotRangeIndex)
+    }
+
+    @Test
+    fun deleteSelectedImagesOfFormatHandlesMixOfPartiallyAndFullyDeletedImages() {
+        val appState = AppState()
+        val images = List(9) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG)) }
+        appState.images = images
+
+        appState.selectToggleImage(images[4])
+        appState.deleteSelectedImages(ImageFormat.JPG)
+        appState.selectToggleImage(images[4])
+
+        val imagesToSelect = listOf(0, 8, 4)
+        imagesToSelect.forEach { appState.selectToggleImage(images[it]) }
+
+        appState.deleteSelectedImages(ImageFormat.DNG)
+
+        assertEquals(images.filterIndexed { idx, _ -> idx != 4 }, appState.images)
+        assertEquals(setOf(images[0], images[8]), appState.selectedImages)
+        assertEquals(7, appState.mostRecentSelectedIndex)
+        assertEquals(7, appState.pivotRangeIndex)
+    }
+
+    @Test
+    fun deleteSelectedImagesSelectsSameIndex() {
+        val appState = AppState()
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         val imagesToSelect = listOf(0, 8, 4)
-
         imagesToSelect.forEach { appState.selectToggleImage(images[it]) }
 
         appState.deleteSelectedImages()
 
         assertEquals(images.filterIndexed { idx, _ -> !imagesToSelect.contains(idx) }, appState.images)
         assertEquals(setOf(images[6]), appState.selectedImages)
-        assertEquals(4, appState.mostRecentSelectedIndex())
-        assertEquals(4, appState.pivotRangeIndex())
+        assertEquals(4, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testDeleteSelectedImagesSelectsSameIndexCapped() {
+    fun deleteSelectedImagesSelectsSameIndexCapped() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         val imagesToSelect = listOf(0, 4, 8)
-
         imagesToSelect.forEach { appState.selectToggleImage(images[it]) }
 
         appState.deleteSelectedImages()
 
         assertEquals(images.filterIndexed { idx, _ -> !imagesToSelect.contains(idx) }, appState.images)
         assertEquals(setOf(images[7]), appState.selectedImages)
-        assertEquals(5, appState.mostRecentSelectedIndex())
-        assertEquals(5, appState.pivotRangeIndex())
+        assertEquals(5, appState.mostRecentSelectedIndex)
+        assertEquals(5, appState.pivotRangeIndex)
     }
 
     @Test
-    fun testDeleteSelectedImagesAll() {
+    fun deleteSelectedImagesAll() {
         val appState = AppState()
-        val images = List(9) { createMockImage() }
+        val images = List(9) { createImage(it) }
         appState.images = images
 
         appState.selectImageRange(images[8])
 
         appState.deleteSelectedImages()
 
-        images.forEach { verify { it.trash() } }
         assertEquals(listOf(), appState.images)
         assertEquals(setOf(), appState.selectedImages)
-        assertEquals(0, appState.mostRecentSelectedIndex())
-        assertEquals(0, appState.pivotRangeIndex())
+        assertEquals(0, appState.mostRecentSelectedIndex)
+        assertEquals(0, appState.pivotRangeIndex)
     }
 }

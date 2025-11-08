@@ -1,3 +1,5 @@
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -33,18 +35,15 @@ fun ImageGrid(appState: AppState) {
         // This seems like an incredibly common use case, so I'm baffled nothing works, but
         // maybe on mobile it can't really happen so they haven't bothered to deal with it?
 
-        fun getColumnCount(): Int {
-            return gridState.layoutInfo.visibleItemsInfo.firstOrNull()?.let { info ->
-                gridState.layoutInfo.visibleItemsInfo.count { it.offset.y == info.offset.y }
-            } ?: 1
-        }
-
-        val lastSelectedIndex = appState.mostRecentSelectedIndex()
+        val lastSelectedIndex = appState.mostRecentSelectedIndex
+        val columnCount = gridState.layoutInfo.visibleItemsInfo.firstOrNull()?.let { info ->
+            gridState.layoutInfo.visibleItemsInfo.count { it.offset.y == info.offset.y }
+        } ?: 1
         val newIndex = when (key) {
             Key.DirectionRight -> (lastSelectedIndex + 1).coerceAtMost(appState.images.lastIndex)
             Key.DirectionLeft -> (lastSelectedIndex - 1).coerceAtLeast(0)
-            Key.DirectionDown -> (lastSelectedIndex + getColumnCount()).coerceAtMost(appState.images.lastIndex)
-            Key.DirectionUp -> (lastSelectedIndex - getColumnCount()).coerceAtLeast(0)
+            Key.DirectionDown -> (lastSelectedIndex + columnCount).coerceAtMost(appState.images.lastIndex)
+            Key.DirectionUp -> (lastSelectedIndex - columnCount).coerceAtLeast(0)
             else -> return
         }
         if (isRange) appState.selectImageRange(newIndex)
@@ -89,27 +88,40 @@ fun ImageGrid(appState: AppState) {
     }
 
     Box {
-        LazyVerticalGrid(
-            state = gridState,
-            columns = GridCells.Adaptive(minSize = 200.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            items(appState.images, key = { it }) {
-                GridImage(
-                    image = it,
-                    isSelected = it in appState.selectedImages,
-                    onClick = { appState.selectImage(it) },
-                    onCtrlClick = { appState.selectToggleImage(it) },
-                    onShiftClick = { appState.selectImageRange(it) },
-                    onTab = { onTabNavigate(it, 1) },
-                    onShiftTab = { onTabNavigate(it, -1) },
-                    onArrowKey = { key, isRange -> onArrowNavigate(key, isRange) },
-                    onDelete = { appState.deleteSelectedImages() },
-                )
+        ContextMenuArea(items = {
+            if (appState.selectedImages.isNotEmpty()) {
+                listOf(
+                    ContextMenuItem("Delete Selected Images") {
+                        appState.deleteSelectedImages()
+                    },
+                ) + appState.selectedImagesFormats.map {
+                    ContextMenuItem("Deleted Selected ${it}s") {
+                        appState.deleteSelectedImages(it)
+                    }
+                }
+            } else emptyList()
+        }) {
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Adaptive(minSize = 200.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                items(appState.images, key = { it }) {
+                    GridImage(
+                        image = it,
+                        isSelected = it in appState.selectedImages,
+                        onClick = { appState.selectImage(it) },
+                        onCtrlClick = { appState.selectToggleImage(it) },
+                        onShiftClick = { appState.selectImageRange(it) },
+                        onTab = { onTabNavigate(it, 1) },
+                        onShiftTab = { onTabNavigate(it, -1) },
+                        onArrowKey = { key, isRange -> onArrowNavigate(key, isRange) },
+                    )
+                }
             }
         }
         VerticalScrollbar(

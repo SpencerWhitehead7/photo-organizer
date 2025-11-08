@@ -1,4 +1,7 @@
 import ImagePath.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.awt.ComposeWindow
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -6,10 +9,13 @@ import coil3.executeBlocking
 import coil3.request.ImageRequest
 import coil3.size.Precision
 import coil3.size.Size
+import java.awt.Desktop
 import java.awt.Desktop.getDesktop
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
+
+val DESKTOP: Desktop = getDesktop()
 
 enum class ImageFormat(val extension: String) {
     DNG("dng"),
@@ -22,13 +28,14 @@ enum class ImageFormat(val extension: String) {
 val SUPPORTED_IMAGES_FORMATS = ImageFormat.entries.map { it.extension }.toSet()
 
 sealed class ImagePath {
-    data class Dng(override val path: String) : ImagePath()
-    data class Jpeg(override val path: String) : ImagePath()
-    data class Jpg(override val path: String) : ImagePath()
-    data class Png(override val path: String) : ImagePath()
-    data class Webp(override val path: String) : ImagePath()
+    data class Dng(override val path: String, override val desktop: Desktop) : ImagePath()
+    data class Jpeg(override val path: String, override val desktop: Desktop) : ImagePath()
+    data class Jpg(override val path: String, override val desktop: Desktop) : ImagePath()
+    data class Png(override val path: String, override val desktop: Desktop) : ImagePath()
+    data class Webp(override val path: String, override val desktop: Desktop) : ImagePath()
 
     abstract val path: String
+    abstract val desktop: Desktop
 
     val format: ImageFormat
         get() = when (this) {
@@ -45,14 +52,16 @@ sealed class ImagePath {
 
     fun trash(): Boolean {
         // TODO: does it work on windows? linux? fallbacks? error handling?
-        return getDesktop().moveToTrash(this.asFile())
+        return this.desktop.moveToTrash(this.asFile())
     }
 }
 
 class Image private constructor(
     val id: String,
-    private val paths: List<ImagePath>
+    paths: List<ImagePath>
 ) {
+    private var paths by mutableStateOf(paths)
+
     companion object {
         fun create(
             id: String,
@@ -60,14 +69,15 @@ class Image private constructor(
             jpeg: String? = null,
             jpg: String? = null,
             png: String? = null,
-            webp: String? = null
+            webp: String? = null,
+            desktop: Desktop = DESKTOP
         ): Image {
             val paths = buildList {
-                webp?.let { add(Webp(it)) }
-                png?.let { add(Png(it)) }
-                jpeg?.let { add(Jpeg(it)) }
-                jpg?.let { add(Jpg(it)) }
-                dng?.let { add(Dng(it)) }
+                webp?.let { add(Webp(it, desktop)) }
+                png?.let { add(Png(it, desktop)) }
+                jpeg?.let { add(Jpeg(it, desktop)) }
+                jpg?.let { add(Jpg(it, desktop)) }
+                dng?.let { add(Dng(it, desktop)) }
             }
 
             require(paths.isNotEmpty()) { "At least one image format must be provided" }
@@ -100,8 +110,18 @@ class Image private constructor(
 
     fun trash(format: ImageFormat? = null) {
         when (format) {
-            null -> paths.forEach { it.trash() }
-            else -> paths.find { it.format == format }?.trash()
+            null -> {
+                paths.forEach { it.trash() }
+                paths = emptyList()
+
+            }
+
+            else -> {
+                val path = paths.find { it.format == format }
+                path?.trash()
+                paths = paths.filter { it != path }
+
+            }
         }
     }
 }

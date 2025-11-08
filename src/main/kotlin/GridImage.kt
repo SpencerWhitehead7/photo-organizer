@@ -1,6 +1,4 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,7 +32,6 @@ fun GridImage(
     onTab: () -> Unit,
     onShiftTab: () -> Unit,
     onArrowKey: (Key, Boolean) -> Unit,
-    onDelete: () -> Unit,
 ) {
     val arrowKeys = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)
 
@@ -44,95 +41,86 @@ fun GridImage(
         else keyboardModifiers.isCtrlPressed
     val isShiftPressed = keyboardModifiers.isShiftPressed
 
-    ContextMenuArea(items = {
-        if (isSelected)
-            listOf(
-                ContextMenuItem("Delete") {
-                    onDelete()
-                },
+    Column(
+        modifier = Modifier
+            .size(200.dp)
+            .background(
+                if (isSelected) MaterialTheme.colors.onBackground.copy(alpha = 0.5f)
+                else MaterialTheme.colors.background
             )
-        else listOf()
-    }) {
-        Column(
-            modifier = Modifier
-                .size(200.dp)
-                .background(
-                    if (isSelected) MaterialTheme.colors.onBackground.copy(alpha = 0.5f)
-                    else MaterialTheme.colors.background
-                )
-                .clickable {
-                    when {
-                        isCtrlPressed && !isShiftPressed -> onCtrlClick()
-                        isShiftPressed && !isCtrlPressed -> onShiftClick()
-                        else -> onClick()
-                    }
+            .clickable {
+                when {
+                    isCtrlPressed && !isShiftPressed -> onCtrlClick()
+                    isShiftPressed && !isCtrlPressed -> onShiftClick()
+                    else -> onClick()
                 }
-                .onKeyEvent {
-                    if (it.type == KeyEventType.KeyDown) {
-                        when (it.key) {
-                            in arrowKeys -> {
-                                if (!isCtrlPressed) {
-                                    onArrowKey(it.key, it.isShiftPressed)
-                                    true
-                                }
-                            }
-
-                            Key.Tab -> {
-                                (if (it.isShiftPressed) onShiftTab else onTab)()
+            }
+            .onKeyEvent {
+                if (it.type == KeyEventType.KeyDown) {
+                    when (it.key) {
+                        in arrowKeys -> {
+                            if (!isCtrlPressed) {
+                                onArrowKey(it.key, it.isShiftPressed)
                                 true
                             }
-
-                            else -> false
                         }
+
+                        Key.Tab -> {
+                            (if (it.isShiftPressed) onShiftTab else onTab)()
+                            true
+                        }
+
+                        else -> false
                     }
-                    false
                 }
+                false
+            }
+    ) {
+        Box(
+            modifier = Modifier.weight(1f)
         ) {
-            Box(
-                modifier = Modifier.weight(1f)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalPlatformContext.current)
-                        .data(image.asFile())
-                        .build(),
+            AsyncImage(
+                model = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(image.asFile())
+                    .build(),
 //                    placeholder = placeholder, // TODO: add
 //                    fallback = , // TODO: add
 //                    error = , // TODO: add
-                    contentDescription = "Image from: ${image.id}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.Center
-                )
+                contentDescription = "Image from: ${image.id}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center
+            )
 
-                Row( // TODO: replace with FlowRow once that API is finalized (overflowing
-                    // labels isn't an urgent problem but it'd be nice know it'd work)
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    image.formats().forEach {
-                        Text( // TODO: comp with different color per image format
-                            text = it.extension,
-                            style = MaterialTheme.typography.caption,
-                            color = MaterialTheme.colors.onPrimary,
-                            modifier = Modifier
-                                .background(
-                                    color = MaterialTheme.colors.primary,
-                                    shape = RoundedCornerShape(4.dp),
-                                )
-                                .padding(4.dp)
-                        )
-                    }
+            Row( // TODO: replace with FlowRow once that API is finalized (overflowing
+                // labels isn't an urgent problem but it'd be nice know it'd work)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                image.formats().forEach {
+                    Text( // TODO: comp with different color per image format
+                        text = it.extension,
+                        style = MaterialTheme.typography.caption,
+                        color = MaterialTheme.colors.onPrimary,
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colors.primary,
+                                shape = RoundedCornerShape(4.dp),
+                            )
+                            .padding(4.dp)
+                    )
                 }
             }
-
-            Text(
-                text = image.id,
-                style = MaterialTheme.typography.caption,
-                color = if (isSelected) MaterialTheme.colors.background
-                else MaterialTheme.colors.onBackground,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
         }
+
+        Text(
+            text = image.id,
+            style = MaterialTheme.typography.caption,
+            color = if (isSelected) MaterialTheme.colors.background
+            else MaterialTheme.colors.onBackground,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
     }
 }
+
