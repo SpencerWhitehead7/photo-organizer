@@ -13,4 +13,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "photo-organizer-2"
+rootProject.name = "photo-organizer"

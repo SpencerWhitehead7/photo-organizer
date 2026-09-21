@@ -34,7 +34,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "photo-organizer-2"
+            packageName = "photo-organizer"
             packageVersion = "1.0.0"
         }
     }
