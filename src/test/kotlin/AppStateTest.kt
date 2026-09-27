@@ -1,7 +1,6 @@
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.awt.Desktop
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,19 +11,15 @@ import kotlin.test.assertTrue
 class AppStateTest {
     private fun createImage(
         suffix: Int = 0,
-        formats: Set<ImageFormat> = setOf(ImageFormat.JPG),
-        mockedDesktop: Desktop = mockk<Desktop>()
+        formats: List<ImageFormat> = listOf(ImageFormat.JPG),
+        mockedDiskOperations: DiskOperations = mockk<DiskOperations>()
     ): Image {
-        every { mockedDesktop.moveToTrash(any<File>()) } returns true
+        every { mockedDiskOperations.trash(any<File>()) } returns true
 
         return Image.create(
             id = "filename$suffix",
-            dng = if (formats.contains(ImageFormat.DNG)) "filename$suffix.dng" else null,
-            jpeg = if (formats.contains(ImageFormat.JPEG)) "filename$suffix.jpeg" else null,
-            jpg = if (formats.contains(ImageFormat.JPG)) "filename$suffix.jpg" else null,
-            png = if (formats.contains(ImageFormat.PNG)) "filename$suffix.png" else null,
-            webp = if (formats.contains(ImageFormat.WEBP)) "filename$suffix.webp" else null,
-            desktop = mockedDesktop
+            files = formats.map { File("filename$suffix.${it.extension}")},
+            diskOperations = mockedDiskOperations
         )
     }
 
@@ -50,12 +45,12 @@ class AppStateTest {
 
     @Test
     fun selectedImageFormats() {
-        val allFormat = ImageFormat.entries.toSet()
-        val dngFormat = setOf(ImageFormat.DNG)
-        val jpegFormat = setOf(ImageFormat.JPEG)
-        val jpgFormat = setOf(ImageFormat.JPG)
-        val pngFormat = setOf(ImageFormat.PNG)
-        val webpFormat = setOf(ImageFormat.WEBP)
+        val allFormat = ImageFormat.entries
+        val dngFormat = listOf(ImageFormat.DNG)
+        val jpegFormat = listOf(ImageFormat.JPEG)
+        val jpgFormat = listOf(ImageFormat.JPG)
+        val pngFormat = listOf(ImageFormat.PNG)
+        val webpFormat = listOf(ImageFormat.WEBP)
 
         val all = createImage(0, allFormat)
         val dng = createImage(0, dngFormat)
@@ -71,17 +66,17 @@ class AppStateTest {
         assertEquals(emptySet(), appState.selectedImagesFormats)
 
         appState.selectToggleImage(all)
-        assertEquals(allFormat, appState.selectedImagesFormats)
+        assertEquals(allFormat.toSet(), appState.selectedImagesFormats)
 
         appState.selectToggleImage(dng)
         appState.selectToggleImage(jpeg)
         appState.selectToggleImage(jpg)
         appState.selectToggleImage(png)
         appState.selectToggleImage(webp)
-        assertEquals(allFormat, appState.selectedImagesFormats)
+        assertEquals(allFormat.toSet(), appState.selectedImagesFormats)
 
         appState.selectToggleImage(all)
-        assertEquals(allFormat, appState.selectedImagesFormats)
+        assertEquals(allFormat.toSet(), appState.selectedImagesFormats)
 
         appState.selectToggleImage(dng)
         assertEquals(
@@ -401,18 +396,18 @@ class AppStateTest {
 
     @Test
     fun deleteSelectedImages() {
-        val mockedDesktop = mockk<Desktop>()
+        val mockedDiskOperations = mockk<DiskOperations>()
 
         val appState = AppState()
-        val images = List(3) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG), mockedDesktop) }
+        val images = List(3) { createImage(it, listOf(ImageFormat.DNG, ImageFormat.JPG), mockedDiskOperations) }
         appState.images = images
 
         appState.selectImage(1)
 
         appState.deleteSelectedImages()
 
-        verify { mockedDesktop.moveToTrash(File("filename1.dng")) }
-        verify { mockedDesktop.moveToTrash(File("filename1.jpg")) }
+        verify { mockedDiskOperations.trash(File("filename1.dng")) }
+        verify { mockedDiskOperations.trash(File("filename1.jpg")) }
         assertEquals(listOf(images[0], images[2]), appState.images)
         assertEquals(setOf(images[2]), appState.selectedImages)
         assertEquals(1, appState.mostRecentSelectedIndex)
@@ -421,17 +416,17 @@ class AppStateTest {
 
     @Test
     fun deleteSelectedImagesOfFormat() {
-        val mockedDesktop = mockk<Desktop>()
+        val mockedDiskOperations = mockk<DiskOperations>()
 
         val appState = AppState()
-        val images = List(3) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG), mockedDesktop) }
+        val images = List(3) { createImage(it, listOf(ImageFormat.DNG, ImageFormat.JPG), mockedDiskOperations) }
         appState.images = images
 
         appState.selectImage(1)
 
         appState.deleteSelectedImages(ImageFormat.DNG)
 
-        verify { mockedDesktop.moveToTrash(File("filename1.dng")) }
+        verify { mockedDiskOperations.trash(File("filename1.dng")) }
         assertEquals(images, appState.images)
         assertEquals(setOf(images[1]), appState.selectedImages)
         assertEquals(1, appState.mostRecentSelectedIndex)
@@ -441,7 +436,7 @@ class AppStateTest {
     @Test
     fun deleteSelectedImagesOfFormatHandlesPartiallyAndFullyDeletedImages() {
         val appState = AppState()
-        val images = List(3) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG)) }
+        val images = List(3) { createImage(it, listOf(ImageFormat.DNG, ImageFormat.JPG)) }
         appState.images = images
 
         appState.selectImage(1)
@@ -464,7 +459,7 @@ class AppStateTest {
     @Test
     fun deleteSelectedImagesOfFormatHandlesMixOfPartiallyAndFullyDeletedImages() {
         val appState = AppState()
-        val images = List(9) { createImage(it, setOf(ImageFormat.DNG, ImageFormat.JPG)) }
+        val images = List(9) { createImage(it, listOf(ImageFormat.DNG, ImageFormat.JPG)) }
         appState.images = images
 
         appState.selectToggleImage(images[4])

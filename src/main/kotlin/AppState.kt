@@ -28,7 +28,7 @@ class AppState {
         get() = selectedImages.flatMap { it.formats() }.toSet()
 
     fun load() {
-        loadImagesFromDisk()?.let { newImages ->
+        loadImages()?.let { newImages ->
             images = newImages.sortedBy { it.id } // TODO: add other sorting mechanisms
             images.firstOrNull()?.let {
                 selectedImages = setOf(it)

@@ -1,21 +1,16 @@
-import ImagePath.*
+import ImageFile.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.awt.ComposeWindow
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.executeBlocking
 import coil3.request.ImageRequest
 import coil3.size.Precision
 import coil3.size.Size
-import java.awt.Desktop
-import java.awt.Desktop.getDesktop
 import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
-
-val DESKTOP: Desktop = getDesktop()
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 enum class ImageFormat(val extension: String) {
     DNG("dng"),
@@ -23,19 +18,33 @@ enum class ImageFormat(val extension: String) {
     JPG("jpg"),
     PNG("png"),
     WEBP("webp");
+
+    companion object {
+        val SUPPORTED = entries.map { it.extension }.toSet()
+
+        val FORMAT_TO_USE_ORDER = listOf(
+            WEBP,
+            PNG,
+            JPEG,
+            JPG,
+            DNG,
+        )
+            .withIndex()
+            .associate { (idx, fmt) -> fmt to idx }
+
+        private val byExtension = entries.associateBy { it.extension }
+        fun fromExtension(extension: String): ImageFormat = byExtension[extension]!!
+    }
 }
 
-val SUPPORTED_IMAGES_FORMATS = ImageFormat.entries.map { it.extension }.toSet()
+sealed class ImageFile {
+    data class Dng(override val file: File) : ImageFile()
+    data class Jpeg(override val file: File) : ImageFile()
+    data class Jpg(override val file: File) : ImageFile()
+    data class Png(override val file: File) : ImageFile()
+    data class Webp(override val file: File) : ImageFile()
 
-sealed class ImagePath {
-    data class Dng(override val path: String, override val desktop: Desktop) : ImagePath()
-    data class Jpeg(override val path: String, override val desktop: Desktop) : ImagePath()
-    data class Jpg(override val path: String, override val desktop: Desktop) : ImagePath()
-    data class Png(override val path: String, override val desktop: Desktop) : ImagePath()
-    data class Webp(override val path: String, override val desktop: Desktop) : ImagePath()
-
-    abstract val path: String
-    abstract val desktop: Desktop
+    abstract val file: File
 
     val format: ImageFormat
         get() = when (this) {
@@ -45,52 +54,45 @@ sealed class ImagePath {
             is Png -> ImageFormat.PNG
             is Webp -> ImageFormat.WEBP
         }
-
-    fun asFile(): File {
-        return File(path)
-    }
-
-    fun trash(): Boolean {
-        // TODO: does it work on windows? linux? fallbacks? error handling?
-        return this.desktop.moveToTrash(this.asFile())
-    }
 }
 
 class Image private constructor(
     val id: String,
-    paths: List<ImagePath>
+    imageFiles: List<ImageFile>,
+    private val diskOperations: DiskOperations,
 ) {
-    private var paths by mutableStateOf(paths)
+    private var imageFiles by mutableStateOf(imageFiles)
 
     companion object {
         fun create(
             id: String,
-            dng: String? = null,
-            jpeg: String? = null,
-            jpg: String? = null,
-            png: String? = null,
-            webp: String? = null,
-            desktop: Desktop = DESKTOP
+            files: List<File>,
+            diskOperations: DiskOperations = DiskOperations,
         ): Image {
-            val paths = buildList {
-                webp?.let { add(Webp(it, desktop)) }
-                png?.let { add(Png(it, desktop)) }
-                jpeg?.let { add(Jpeg(it, desktop)) }
-                jpg?.let { add(Jpg(it, desktop)) }
-                dng?.let { add(Dng(it, desktop)) }
-            }
+            val imageFiles: List<ImageFile> = files
+                .groupBy { ImageFormat.fromExtension(it.extension.lowercase()) }
+                .toSortedMap(compareBy { ImageFormat.FORMAT_TO_USE_ORDER[it] })
+                .flatMap { (ext, files) ->
+                    when (ext) {
+                        ImageFormat.DNG -> files.map { Dng(it) }
+                        ImageFormat.JPG -> files.map { Jpg(it) }
+                        ImageFormat.JPEG -> files.map { Jpeg(it) }
+                        ImageFormat.PNG -> files.map { Png(it) }
+                        ImageFormat.WEBP -> files.map { Webp(it) }
+                    }
+                }
+            require(imageFiles.isNotEmpty()) { "At least one supported format image must be provided" }
 
-            require(paths.isNotEmpty()) { "At least one image format must be provided" }
-            return Image(id, paths)
+            return Image(id, imageFiles, diskOperations)
         }
     }
 
     fun asFile(): File {
-        return paths.first().asFile()
+        return this.imageFiles.first().file
     }
 
     fun formats(): List<ImageFormat> {
-        return paths.map { it.format }
+        return this.imageFiles.map { it.format }
     }
 
     fun isVertical(ctx: PlatformContext): Boolean {
@@ -109,65 +111,18 @@ class Image private constructor(
     }
 
     fun trash(format: ImageFormat? = null) {
-        when (format) {
-            null -> {
-                paths.forEach { it.trash() }
-                paths = emptyList()
-
-            }
-
-            else -> {
-                val path = paths.find { it.format == format }
-                path?.trash()
-                paths = paths.filter { it != path }
-
-            }
+        val (filesToTrash, filesToRetain) = when (format) {
+            null -> this.imageFiles to emptyList()
+            else -> this.imageFiles.partition { it.format == format }
         }
+
+        filesToTrash.forEach { this.diskOperations.trash(it.file) }
+        this.imageFiles = filesToRetain
     }
 }
 
-fun loadImagesFromDisk(): List<Image>? {
-    val fileChooser = JFileChooser().apply {
-        fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
-        isMultiSelectionEnabled = true
-        fileFilter = FileNameExtensionFilter(
-            "Images", *SUPPORTED_IMAGES_FORMATS.toTypedArray()
-        )
-    }
-
-    val result = fileChooser.showOpenDialog(ComposeWindow())
-    if (result != JFileChooser.APPROVE_OPTION) return null
-
-    val imagePaths = fileChooser.selectedFiles.flatMap { filePath ->
-        val file = File(filePath.absolutePath)
-
-        when {
-            file.isFile -> {
-                if (file.extension.lowercase() in SUPPORTED_IMAGES_FORMATS) listOf(file.absolutePath)
-                else emptyList()
-            }
-
-            file.isDirectory -> {
-                file.walk()
-                    .filter { it.isFile && it.extension.lowercase() in SUPPORTED_IMAGES_FORMATS }
-                    .map { it.absolutePath }
-                    .toList()
-            }
-
-            else -> emptyList()
-        }
-    }
-
-    return imagePaths
-        .groupBy { File(it).nameWithoutExtension }
-        .map { (filename, paths) ->
-            Image.create(
-                id = filename,
-                dng = paths.find { it.endsWith(".dng", ignoreCase = true) },
-                jpeg = paths.find { it.endsWith(".jpeg", ignoreCase = true) },
-                jpg = paths.find { it.endsWith(".jpg", ignoreCase = true) },
-                png = paths.find { it.endsWith(".png", ignoreCase = true) },
-                webp = paths.find { it.endsWith(".webp", ignoreCase = true) }
-            )
-        }
+fun loadImages(): List<Image>? {
+    return selectFilesViaUserPicker("Images", ImageFormat.SUPPORTED)
+        ?.groupBy { it.nameWithoutExtension }
+        ?.map { (filename, files) -> Image.create(filename, files) }
 }
