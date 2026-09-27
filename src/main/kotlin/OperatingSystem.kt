@@ -1,5 +1,5 @@
 enum class OS {
-    /*WINDOWS,*/ MAC /*, LINUX*/
+    /*WINDOWS,*/ MAC, LINUX
 }
 
 fun getOS(): OS {
@@ -8,6 +8,7 @@ fun getOS(): OS {
         .let {
             when {
                 it.contains("mac") -> OS.MAC
+                it.contains("nix") || it.contains("nux") || it.contains("aix") -> OS.LINUX
                 else -> throw UnsupportedOperationException("Unsupported operating system")
             }
         }

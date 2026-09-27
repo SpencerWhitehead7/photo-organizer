@@ -12,6 +12,20 @@ object DiskOperations {
             OS.MAC -> {
                 this.desktop.moveToTrash(f)
             }
+            OS.LINUX -> {
+                // shelling out to do this seems insane, but I can't find a better way
+                // and I'm not exactly a native development / kotlin / linux expert
+                runCatching {
+                    ProcessBuilder(
+                        "gio",
+                        "trash",
+                        f.absolutePath
+                    )
+                        .redirectErrorStream(true)
+                        .start()
+                        .waitFor() == 0
+                }.getOrDefault(false)
+            }
         }
     }
 }
