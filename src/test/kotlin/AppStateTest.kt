@@ -1,4 +1,3 @@
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.io.File
@@ -9,20 +8,6 @@ import kotlin.test.assertTrue
 
 
 class AppStateTest {
-    private fun createImage(
-        suffix: Int = 0,
-        formats: List<ImageFormat> = listOf(ImageFormat.JPG),
-        mockedDiskOperations: DiskOperations = mockk<DiskOperations>()
-    ): Image {
-        every { mockedDiskOperations.trash(any<File>()) } returns true
-
-        return Image.create(
-            id = "filename$suffix",
-            files = formats.map { File("filename$suffix.${it.extension}")},
-            diskOperations = mockedDiskOperations
-        )
-    }
-
     @Test
     fun initialState() {
         val appState = AppState()

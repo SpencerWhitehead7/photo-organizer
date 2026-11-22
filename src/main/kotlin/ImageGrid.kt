@@ -1,27 +1,38 @@
-import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
-import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.apache.commons.lang3.SystemUtils
 
 @Composable
 fun ImageGrid(appState: AppState) {
     val gridState = rememberLazyGridState()
+    val focusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
 
-    fun onTabNavigate(image: Image, offset: Int) {
-        val newSelectedIndex = (appState.images.indexOf(image) + offset).coerceIn(0, appState.images.lastIndex)
+    val keyboardModifiers = LocalWindowInfo.current.keyboardModifiers
+    val isCtrlPressed =
+        if (SystemUtils.IS_OS_UNIX) keyboardModifiers.isMetaPressed
+        else keyboardModifiers.isCtrlPressed
+
+    fun onTabNavigate(offset: Int) {
+        val newSelectedIndex = (appState.mostRecentSelectedIndex + offset).coerceIn(0, appState.images.lastIndex)
 
         appState.selectImage(newSelectedIndex)
     }
@@ -87,6 +98,12 @@ fun ImageGrid(appState: AppState) {
         }
     }
 
+    LaunchedEffect(appState.images, appState.selectedImages) {
+        if (appState.selectedImages.isNotEmpty()) {
+            focusRequester.requestFocus()
+        }
+    }
+
     Box {
         ContextMenuArea(items = {
             if (appState.selectedImages.isNotEmpty()) {
@@ -109,6 +126,31 @@ fun ImageGrid(appState: AppState) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp)
+                    .focusRequester(focusRequester)
+                    .focusable()
+                    .onKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown) {
+                            when (event.key) {
+                                Key.Tab -> {
+                                    val offset = if (event.isShiftPressed) -1 else 1
+                                    onTabNavigate(offset)
+                                    true
+                                }
+
+                                Key.DirectionLeft,
+                                Key.DirectionRight,
+                                Key.DirectionUp,
+                                Key.DirectionDown -> {
+                                    if (!isCtrlPressed) onArrowNavigate(event.key, event.isShiftPressed)
+                                    true
+                                }
+
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    }
             ) {
                 items(appState.images, key = { it }) {
                     GridImage(
@@ -117,9 +159,6 @@ fun ImageGrid(appState: AppState) {
                         onClick = { appState.selectImage(it) },
                         onCtrlClick = { appState.selectToggleImage(it) },
                         onShiftClick = { appState.selectImageRange(it) },
-                        onTab = { onTabNavigate(it, 1) },
-                        onShiftTab = { onTabNavigate(it, -1) },
-                        onArrowKey = { key, isRange -> onArrowNavigate(key, isRange) },
                     )
                 }
             }

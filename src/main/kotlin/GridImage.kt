@@ -7,7 +7,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
@@ -27,12 +26,7 @@ fun GridImage(
     onClick: () -> Unit,
     onCtrlClick: () -> Unit,
     onShiftClick: () -> Unit,
-    onTab: () -> Unit,
-    onShiftTab: () -> Unit,
-    onArrowKey: (Key, Boolean) -> Unit,
 ) {
-    val arrowKeys = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown)
-
     val keyboardModifiers = LocalWindowInfo.current.keyboardModifiers
     val isCtrlPressed =
         if (SystemUtils.IS_OS_UNIX) keyboardModifiers.isMetaPressed
@@ -52,26 +46,6 @@ fun GridImage(
                     isShiftPressed && !isCtrlPressed -> onShiftClick()
                     else -> onClick()
                 }
-            }
-            .onKeyEvent {
-                if (it.type == KeyEventType.KeyDown) {
-                    when (it.key) {
-                        in arrowKeys -> {
-                            if (!isCtrlPressed) {
-                                onArrowKey(it.key, it.isShiftPressed)
-                                true
-                            }
-                        }
-
-                        Key.Tab -> {
-                            (if (it.isShiftPressed) onShiftTab else onTab)()
-                            true
-                        }
-
-                        else -> false
-                    }
-                }
-                false
             }
     ) {
         Box(

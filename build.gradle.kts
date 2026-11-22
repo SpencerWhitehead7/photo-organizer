@@ -24,6 +24,7 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.22.0")
 
     testImplementation("io.mockk:mockk:1.14.12")
+    testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.12.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:2.4.21")
 }
 
