@@ -39,6 +39,10 @@ class ImageTest {
 
         assertEquals(File("filename.jpg"), image.asFile())
         assertEquals(listOf(ImageFormat.JPG), image.formats())
+        assertEquals(
+            listOf(ImageFormat.JPG to "filename.jpg"),
+            image.filePaths()
+        )
     }
 
     @Test
@@ -54,6 +58,14 @@ class ImageTest {
 
         assertEquals(File("filename.jpg"), image.asFile())
         assertEquals(listOf(ImageFormat.JPG, ImageFormat.JPG, ImageFormat.JPG), image.formats())
+        assertEquals(
+            listOf(
+                ImageFormat.JPG to "filename.jpg",
+                ImageFormat.JPG to "1/filename.jpg",
+                ImageFormat.JPG to "1/2/filename.jpg",
+            ),
+            image.filePaths()
+        )
     }
 
     @Test
@@ -73,6 +85,16 @@ class ImageTest {
         assertEquals(
             listOf(ImageFormat.WEBP, ImageFormat.PNG, ImageFormat.JPEG, ImageFormat.JPG, ImageFormat.DNG),
             image.formats()
+        )
+        assertEquals(
+            listOf(
+                ImageFormat.WEBP to "filename.webp",
+                ImageFormat.PNG to "filename.png",
+                ImageFormat.JPEG to "filename.jpeg",
+                ImageFormat.JPG to "filename.jpg",
+                ImageFormat.DNG to "filename.dng",
+            ),
+            image.filePaths()
         )
     }
 
@@ -103,6 +125,18 @@ class ImageTest {
                 ImageFormat.JPG,
                 ImageFormat.DNG
             ), image.formats()
+        )
+        assertEquals(
+            listOf(
+                ImageFormat.WEBP to "filename.webp",
+                ImageFormat.PNG to "filename.png",
+                ImageFormat.JPEG to "filename.jpeg",
+                ImageFormat.JPG to "filename.jpg",
+                ImageFormat.JPG to "1/filename.jpg",
+                ImageFormat.JPG to "1/2/filename.jpg",
+                ImageFormat.DNG to "filename.dng",
+            ),
+            image.filePaths()
         )
     }
 }

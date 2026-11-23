@@ -95,6 +95,10 @@ class Image private constructor(
         return this.imageFiles.map { it.format }
     }
 
+    fun filePaths(): List<Pair<ImageFormat, String>> {
+        return this.imageFiles.map { it.format to it.file.path }
+    }
+
     fun isVertical(ctx: PlatformContext): Boolean {
         val request = ImageRequest.Builder(ctx)
             .data(this.asFile())
