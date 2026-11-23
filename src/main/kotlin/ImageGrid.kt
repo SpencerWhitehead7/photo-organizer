@@ -31,71 +31,69 @@ fun ImageGrid(appState: AppState) {
         if (SystemUtils.IS_OS_UNIX) keyboardModifiers.isMetaPressed
         else keyboardModifiers.isCtrlPressed
 
+    fun scrollToItem(itemIndex: Int) {
+        // TODO: scrolling bug
+        // This all seems fine, except that when the function runs during an ongoing
+        // user scroll, it just refuses to scroll to the selected item.
+        // No attempt to fix this has worked at all; not cancelling scrolls, not disabling user scrolling,
+        // not dispatching a scroll to snap to current position and then scrolling, nothing.
+        // This seems like an incredibly common issue, so I'm baffled nothing works, but maybe
+        // on mobile it can't really happen so they haven't bothered to deal with it?
+
+        val gridItem = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == itemIndex }
+
+        val itemHeight = 200 // it'll be fun to figure out the
+        val gutterHeight = 8 // bug if I ever change these
+        val offsetDown = gridState.layoutInfo.viewportSize.height - itemHeight - gutterHeight
+
+        val (isAboveViewport, isBelowViewport) = if (gridItem != null) {
+            val itemRange = (gridItem.offset.y - gutterHeight)..(gridItem.offset.y + itemHeight + gutterHeight)
+
+            val isPartlyAboveViewport = gridState.layoutInfo.viewportStartOffset in itemRange
+            val isPartlyBelowViewport = gridState.layoutInfo.viewportEndOffset in itemRange
+
+            Pair(isPartlyAboveViewport, isPartlyBelowViewport)
+        } else {
+            val isFullyAboveViewport = itemIndex < gridState.layoutInfo.visibleItemsInfo.first().index
+            val isFullyBelowViewport = itemIndex > gridState.layoutInfo.visibleItemsInfo.last().index
+
+            Pair(isFullyAboveViewport, isFullyBelowViewport)
+        }
+
+        val offset = if (isAboveViewport) 0
+        else if (isBelowViewport) -offsetDown
+        else return
+
+        coroutineScope.launch {
+            gridState.animateScrollToItem(itemIndex, offset)
+        }
+    }
+
     fun onTabNavigate(offset: Int) {
         val newSelectedIndex = (appState.mostRecentSelectedIndex + offset).coerceIn(0, appState.images.lastIndex)
 
         appState.selectImage(newSelectedIndex)
+
+        scrollToItem(newSelectedIndex)
     }
 
     fun onArrowNavigate(key: Key, isRange: Boolean) {
-        // TODO: scrolling bug
-        // This all seems to work, except that when the function runs during an ongoing
-        // user scroll, it just refuses to scroll to the arrow-selected item.
-        // No attempt to fix this has worked at all; not cancelling scrolls, not disabling user scrolling,
-        // not dispatching a scroll to snap to current position and then scrolling, nothing.
-        // This seems like an incredibly common use case, so I'm baffled nothing works, but
-        // maybe on mobile it can't really happen so they haven't bothered to deal with it?
-
         val lastSelectedIndex = appState.mostRecentSelectedIndex
         val columnCount = gridState.layoutInfo.visibleItemsInfo.firstOrNull()?.let { info ->
             gridState.layoutInfo.visibleItemsInfo.count { it.offset.y == info.offset.y }
         } ?: 1
-        val newIndex = when (key) {
+        val newSelectedIndex = when (key) {
             Key.DirectionRight -> (lastSelectedIndex + 1).coerceAtMost(appState.images.lastIndex)
             Key.DirectionLeft -> (lastSelectedIndex - 1).coerceAtLeast(0)
             Key.DirectionDown -> (lastSelectedIndex + columnCount).coerceAtMost(appState.images.lastIndex)
             Key.DirectionUp -> (lastSelectedIndex - columnCount).coerceAtLeast(0)
             else -> return
         }
-        if (isRange) appState.selectImageRange(newIndex)
-        else appState.selectImage(newIndex)
 
-        val gridItem = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == newIndex }
+        if (isRange) appState.selectImageRange(newSelectedIndex)
+        else appState.selectImage(newSelectedIndex)
 
-        val firstVisibleItem = gridState.layoutInfo.visibleItemsInfo.first()
-        val lastVisibleItem = gridState.layoutInfo.visibleItemsInfo.last()
-
-        val isFullyAboveViewport = newIndex < firstVisibleItem.index
-        val isFullyBelowViewport = newIndex > lastVisibleItem.index
-        if (gridItem == null || isFullyAboveViewport || isFullyBelowViewport) {
-            coroutineScope.launch {
-                gridState.animateScrollToItem(
-                    newIndex,
-                    if (isFullyAboveViewport) 0
-                    else -(gridState.layoutInfo.viewportSize.height - 200 - 8) // height of an image + padding
-                )
-            }
-            return
-        }
-
-        val viewportStart = gridState.layoutInfo.viewportStartOffset
-        val viewportEnd = gridState.layoutInfo.viewportEndOffset
-
-        val itemStart = gridItem.offset.y
-        val itemEnd = gridItem.offset.y + gridItem.size.height
-
-        val isPartiallyAboveViewport = viewportStart in (itemStart + 1)..<itemEnd
-        val isPartiallyBelowViewport = viewportEnd in (itemStart + 1)..<itemEnd
-        if (isPartiallyAboveViewport || isPartiallyBelowViewport) {
-            coroutineScope.launch {
-                gridState.animateScrollToItem(
-                    newIndex,
-                    if (isPartiallyAboveViewport) 0
-                    else -(gridState.layoutInfo.viewportSize.height - gridItem.size.height)
-                )
-            }
-            return
-        }
+        scrollToItem(newSelectedIndex)
     }
 
     LaunchedEffect(appState.images, appState.selectedImages) {
