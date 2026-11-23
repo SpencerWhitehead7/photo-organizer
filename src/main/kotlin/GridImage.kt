@@ -1,4 +1,3 @@
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,7 +21,6 @@ import coil3.request.ImageRequest
 import org.apache.commons.lang3.SystemUtils
 
 @Composable
-@Preview
 fun GridImage(
     image: Image,
     isSelected: Boolean,
