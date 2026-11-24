@@ -2,6 +2,7 @@ import ImageFile.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.executeBlocking
@@ -34,6 +35,24 @@ enum class ImageFormat(val extension: String) {
 
         private val byExtension = entries.associateBy { it.extension }
         fun fromExtension(extension: String): ImageFormat = byExtension[extension]!!
+    }
+
+    fun color(isLight: Boolean): Color = when (this) {
+        DNG -> if (isLight) Color(0xFFBA8F3A)
+        else Color(0xFFFFD54F)
+
+        JPEG -> if (isLight) Color(0xFF0D47A1)
+        else Color(0xFF90CAF9)
+
+
+        JPG -> if (isLight) Color(0xFF00695C)
+        else Color(0xFF80CBC4)
+
+        PNG -> if (isLight) Color(0xFF2E7D32)
+        else Color(0xFFA5D6A7)
+
+        WEBP -> if (isLight) Color(0xFF6A1B9A)
+        else Color(0xFFCE93D8)
     }
 }
 

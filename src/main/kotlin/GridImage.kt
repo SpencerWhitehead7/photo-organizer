@@ -45,6 +45,7 @@ fun GridImage(
                         Text(
                             text = "${format.extension.uppercase()}: $path",
                             style = MaterialTheme.typography.overline,
+                            color = format.color(MaterialTheme.colors.isLight),
                         )
                     }
                 }
@@ -90,13 +91,13 @@ fun GridImage(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     image.formats().forEach {
-                        Text( // TODO: comp with different color per image format
+                        Text(
                             text = it.extension,
                             style = MaterialTheme.typography.caption,
                             color = MaterialTheme.colors.onPrimary,
                             modifier = Modifier
                                 .background(
-                                    color = MaterialTheme.colors.primary,
+                                    color = it.color(MaterialTheme.colors.isLight),
                                     shape = RoundedCornerShape(4.dp),
                                 )
                                 .padding(4.dp)
