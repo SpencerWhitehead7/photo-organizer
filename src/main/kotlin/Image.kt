@@ -3,6 +3,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.toLowerCase
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.executeBlocking
@@ -22,6 +23,7 @@ enum class ImageFormat(val extension: String) {
 
     companion object {
         val SUPPORTED = entries.map { it.extension }.toSet()
+        fun isSupported(f: File) = f.extension.lowercase() in SUPPORTED
 
         val FORMAT_TO_USE_ORDER = listOf(
             WEBP,
@@ -144,8 +146,22 @@ class Image private constructor(
     }
 }
 
-fun loadImages(): List<Image>? {
-    return selectFilesViaUserPicker("Images", ImageFormat.SUPPORTED)
-        ?.groupBy { it.nameWithoutExtension }
-        ?.map { (filename, files) -> Image.create(filename, files) }
+fun loadImages(sources: List<File>): List<Image> {
+    return sources.flatMap { source ->
+        when {
+            source.isFile ->
+                if (ImageFormat.isSupported(source)) listOf(source)
+                else emptyList()
+
+            source.isDirectory ->
+                source
+                    .walk()
+                    .filter { it.isFile && ImageFormat.isSupported(it) }
+                    .toList()
+
+            else -> emptyList()
+        }
+    }
+        .groupBy { it.nameWithoutExtension }
+        .map { (filename, imageFiles) -> Image.create(filename, imageFiles) }
 }

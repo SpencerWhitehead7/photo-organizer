@@ -1,6 +1,7 @@
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 
@@ -11,6 +12,8 @@ class AppState {
     fun toggleIsImageGridPoppedOut() {
         this.isImageGridPoppedOut = !this.isImageGridPoppedOut
     }
+
+    private var sources = emptyList<File>()
 
     var images by mutableStateOf(listOf<Image>())
     var selectedImages by mutableStateOf(setOf<Image>())
@@ -28,14 +31,13 @@ class AppState {
         get() = selectedImages.flatMap { it.formats() }.toSet()
 
     fun load() {
-        loadImages()?.let { newImages ->
-            images = newImages.sortedBy { it.id } // TODO: add other sorting mechanisms
-            images.firstOrNull()?.let {
-                selectedImages = setOf(it)
-                orderedSelectedForMostRecentIndex = linkedSetOf(it)
-                orderedSelectedForRangePivotIndex = linkedSetOf(it)
-            }
-        }
+        sources = selectImageSourcesViaUserPicker("Images", ImageFormat.SUPPORTED) ?: return
+        refresh()
+    }
+
+    fun refresh() {
+        images = loadImages(sources).sortedBy { it.id } // TODO: add other sorting mechanisms
+        images.firstOrNull()?.let(::selectImage) ?: clearSelectedImages()
     }
 
     fun selectImage(newImage: Image) {

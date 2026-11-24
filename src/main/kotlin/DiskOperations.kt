@@ -30,7 +30,7 @@ object DiskOperations {
     }
 }
 
-fun selectFilesViaUserPicker(filterDescription: String, filterExtensions: Set<String>): List<File>? {
+fun selectImageSourcesViaUserPicker(filterDescription: String, filterExtensions: Set<String>): List<File>? {
     val fileChooser = JFileChooser().apply {
         fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
         isMultiSelectionEnabled = true
@@ -40,20 +40,5 @@ fun selectFilesViaUserPicker(filterDescription: String, filterExtensions: Set<St
     val result = fileChooser.showOpenDialog(ComposeWindow())
     if (result != JFileChooser.APPROVE_OPTION) return null
 
-    return fileChooser.selectedFiles.flatMap { file ->
-        when {
-            file.isFile -> {
-                if (file.extension.lowercase() in filterExtensions) listOf(file)
-                else emptyList()
-            }
-
-            file.isDirectory -> {
-                file.walk()
-                    .filter { it.isFile && it.extension.lowercase() in filterExtensions }
-                    .toList()
-            }
-
-            else -> emptyList()
-        }
-    }
+    return fileChooser.selectedFiles.toList()
 }
