@@ -119,6 +119,11 @@ fun FrameWindowScope.AppMenuBar(appState: AppState) {
                 onClick = appState::refresh,
             )
             Item(
+                text = "Select All Images",
+                shortcut = KeyShortcut(key = Key.A, meta = true),
+                onClick = appState::selectAllImages,
+            )
+            Item(
                 text = "Deleted Selected Images",
                 shortcut =
                     if (SystemUtils.IS_OS_UNIX) KeyShortcut(key = Key.Backspace, meta = true)

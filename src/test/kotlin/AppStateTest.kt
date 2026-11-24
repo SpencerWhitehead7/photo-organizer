@@ -137,6 +137,20 @@ class AppStateTest {
     }
 
     @Test
+    fun selectAllImages() {
+        val appState = AppState()
+        val images = List(9) { createImage(it) }
+        appState.images = images
+        appState.selectImage(images[4])
+
+        appState.selectAllImages()
+
+        assertEquals(images.toSet(), appState.selectedImages)
+        assertEquals(4, appState.mostRecentSelectedIndex)
+        assertEquals(4, appState.pivotRangeIndex)
+    }
+
+    @Test
     fun selectToggleImage() {
         val appState = AppState()
         val images = List(9) { createImage(it) }

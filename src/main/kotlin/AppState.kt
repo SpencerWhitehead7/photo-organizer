@@ -50,6 +50,10 @@ class AppState {
         selectImage(images[newImageIndex])
     }
 
+    fun selectAllImages() {
+        selectedImages += images
+    }
+
     fun selectToggleImage(newImage: Image) {
         if (newImage in selectedImages) {
             selectedImages -= newImage
