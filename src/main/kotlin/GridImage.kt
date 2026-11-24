@@ -85,8 +85,7 @@ fun GridImage(
                     alignment = Alignment.Center
                 )
 
-                Row( // TODO: replace with FlowRow once that API is finalized (overflowing
-                    // labels isn't an urgent problem but it'd be nice know it'd work)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
